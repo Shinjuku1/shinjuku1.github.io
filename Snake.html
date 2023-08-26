@@ -56,7 +56,14 @@
         if (direction === "Down") newHead.y += 20;
         if (direction === "Left") newHead.x -= 20;
         if (direction === "Right") newHead.x += 20;
-
+        
+    // Check for self-collision before updating snake
+    for (let i = 1; i < snake.length; i++) {
+      if (newHead.x === snake[i].x && newHead.y === snake[i].y) {
+        gameOver = true;
+        return;
+      }
+    }
         snake.unshift(newHead);
       }
 
