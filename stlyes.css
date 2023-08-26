@@ -1,0 +1,53 @@
+/* Reset some default browser styles */
+body, h1, ul, li {
+    margin: 0;
+    padding: 0;
+}
+
+/* Add background color to the whole page */
+body {
+    background-color: #f4f4f4;
+    font-family: Arial, sans-serif;
+}
+
+/* Container for the whole content */
+.container {
+    max-width: 960px;
+    margin: auto;
+    background-color: #fff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Header styles */
+header {
+    text-align: center;
+    background-color: #333;
+    color: white;
+    padding: 10px 0;
+}
+
+/* Navigation styles */
+nav ul.game-list {
+    list-style-type: none;
+}
+
+nav ul.game-list li {
+    background-color: #eee;
+    margin: 8px 0;
+    padding: 10px;
+    text-align: center;
+}
+
+nav ul.game-list li:hover {
+    background-color: #ddd;
+}
+
+a.game-link {
+    text-decoration: none;
+    color: #333;
+}
+
+a.game-link:hover {
+    color: #555;
+}
