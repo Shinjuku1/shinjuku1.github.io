@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Flappy Cube</title>
+  <style>
+    canvas {
+      border: 2px solid black;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="gameCanvas" width="1200" height="600"></canvas>
+
+<script>
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+
+  // Initialize variables
+  let playerX = 50;
+  let playerY = 300;
+  let playerWidth = 50;
+  let playerHeight = 50;
+  let score = 0;
+  let highScore = 0;
+  let gravity = 0.5;
+  let velocity = 0;
+  let jump = -10;
+
+  let obstacles = [];
+  let gameSpeed = 5;  // Reduced from 5 to 3
+
+  let lastUpdate = Date.now();
+  const frameRate = 60;  // 30 updates per second
+
+  function generateObstacle() {
+    const obstacleHeight = Math.floor(Math.random() * 200) + 50;
+    const obstacleY = Math.floor(Math.random() * (600 - obstacleHeight));
+    const obstacle = { x: 1200, y: obstacleY, width: 50, height: obstacleHeight };
+    obstacles.push(obstacle);
+  }
+
+// Listen for Spacebar press to jump
+document.addEventListener('keydown', function(event) {
+  if (event.code === 'Space') {
+    velocity += jump;
+  }
+});
+
+// Focus the canvas when clicked, to make sure it receives mouse events
+canvas.addEventListener('click', function() {
+  canvas.focus();
+});
+
+// Listen for mouse left button click to jump
+canvas.addEventListener('mousedown', function(event) {
+  if (event.button === 0) {  // 0 is the code for the left mouse button
+    velocity += jump;
+  }
+});
+
+  let gameOver = false;
+
+function resetGame() {
+  playerX = 50;
+  playerY = 300;
+  velocity = 0;
+  obstacles = [];
+  score = 0;
+  gameOver = false;
+  gameLoop();
+}
+
+function gameLoop() {
+  if (!gameOver) {
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Update score
+        score++;
+        if (score > highScore) {
+          highScore = score;
+        }
+
+        // Update player position
+        playerY += velocity;
+        velocity += gravity;
+
+        // Add a bottom boundary
+        if (playerY > 550) {
+          playerY = 550;
+          velocity = 0;
+        }
+
+        // Add a top boundary
+        if (playerY < 0) {
+          playerY = 0;
+          velocity = 0;
+        }
+
+        // Generate obstacle
+        if (Math.random() < 0.02) {
+          generateObstacle();
+        }
+
+        // Update and draw obstacles
+        for (let i = 0; i < obstacles.length; i++) {
+          const obstacle = obstacles[i];
+          obstacle.x -= gameSpeed;
+          ctx.fillStyle = 'red';
+          ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+
+          if (obstacle.x < -obstacle.width) {
+            obstacles.splice(i, 1);
+            i--;
+          }
+        }
+
+    // Check for collision
+    for (let i = 0; i < obstacles.length; i++) {
+      const obstacle = obstacles[i];
+      if (playerX < obstacle.x + obstacle.width &&
+        playerX + playerWidth > obstacle.x &&
+        playerY < obstacle.y + obstacle.height &&
+        playerY + playerHeight > obstacle.y) {
+        // Collision detected, end game
+        gameOver = true;
+        alert("Game Over! Your Score: " + score + ", High Score: " + highScore);
+        resetGame();
+        return; // Exit this game loop
+      }
+    }
+
+    // Draw player
+    ctx.fillStyle = 'blue';
+    ctx.fillRect(playerX, playerY, playerWidth, playerHeight);
+  
+    // Draw score and high score
+    ctx.fillStyle = 'black';
+    ctx.font = '24px Arial';
+    ctx.fillText("Score: " + score, 900, 30);
+    ctx.fillText("High Score: " + highScore, 900, 60);
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+
+// Start the game loop
+gameLoop();
+</script>
+
+</body>
+</html>
