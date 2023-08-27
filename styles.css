@@ -1,33 +1,38 @@
 body, html {
-    margin: 0;
-    padding: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    background-color: #f0f0f0;
-  }
-  
-  #gameContainer {
-    display: flex;
-    align-items: center;
-  }
-  
-  #gameCanvas {
-    border: 4px solid black;
-    width: 600px;
-    height: 800px;
-  }
-  
-  #scoreContainer, #highScoreContainer {
-    margin-left: 20px;
-  }
-  
-  #score {
-    font-size: 24px;
-  }
-  
-  #highScores {
-    margin-top: 20px;
-  }
-  
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #f0f0f0;
+}
+
+#gameContainer {
+  display: flex;
+  align-items: center;
+}
+
+#gameCanvas {
+  border: 4px solid black;
+  width: 600px;
+  height: 800px;
+}
+
+#scoreContainer, #highScoreContainer {
+  margin-left: 20px;
+}
+
+#score {
+  font-size: 24px;
+}
+
+#highScores {
+  margin-top: 20px;
+}
+
+/* Add CSS to scale images down by 50% */
+.game-image {
+  width: 50%;
+  height: auto;
+}
