@@ -30,9 +30,3 @@ body, html {
 #highScores {
   margin-top: 20px;
 }
-
-/* Add CSS to scale images down by 50% */
-.game-image {
-  width: 50%;
-  height: auto;
-}
