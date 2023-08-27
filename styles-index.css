@@ -52,8 +52,8 @@ a.game-link:hover {
     color: #555;
 }
 
-/* Add CSS to scale images down by 50% */
+/* Set images to be exactly 100 x 100 pixels */
 .game-image {
-    width: 50%;
-    height: auto;
+    width: 100px;
+    height: 100px;
 }
