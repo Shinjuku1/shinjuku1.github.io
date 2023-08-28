@@ -68,15 +68,16 @@ document.addEventListener("DOMContentLoaded", function () {
     canvas.addEventListener("mousedown", function (e) {
       const x = e.clientX - canvas.getBoundingClientRect().left;
       const y = e.clientY - canvas.getBoundingClientRect().top;
-  
+    
       if (Math.sqrt((x - ballX) ** 2 + (y - ballY) ** 2) < ballRadius) {
-        dx = (x - ballX) / 10;
+        dx = -(x - ballX) / 10;  // Negative value for opposite direction
         dy = -10;
         gameStarted = true;
         score++;
         scoreElement.textContent = "Score: " + score;
       }
     });
+      
   
   // Initialize high scores from local storage if available
     const storedHighScores = localStorage.getItem('highScores');
