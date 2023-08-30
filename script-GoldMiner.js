@@ -200,6 +200,9 @@ function resetGame() {
 
   // Reset highscores display
   displayHighscores();
+
+  // Reset the board display
+  updateBoard();  // You can call this to make sure the board and score are properly displayed
 }
 
 // Highscores
