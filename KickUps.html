@@ -6,14 +6,16 @@
   <link rel="stylesheet" href="https://shinjuku1.github.io/styles-KickUps.css">
 </head>
 <body>
-  <div id="gameContainer">
-    <canvas id="gameCanvas" width="600" height="800"></canvas>
+  <div id="container">
     <div id="scoreContainer">
       <div id="score">Score: 0</div>
+      <div id="highScoreContainer">
+        <div>High Scores:</div>
+        <ul id="scoreList"></ul>
+      </div>
     </div>
-    <div id="highScoreContainer">
-      <div>High Scores:</div>
-      <ul id="scoreList"></ul>
+    <div id="gameCanvasContainer">
+      <canvas id="gameCanvas" width="600" height="800"></canvas>
     </div>
   </div>
   <script src="https://shinjuku1.github.io/script-KickUps.js"></script>
