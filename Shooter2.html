@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Shooter Game</title>
+    <style>
+        * { margin: 0; padding: 0; }
+        canvas {
+            display: block;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 100%;
+            max-height: 100%;
+            border: 5px solid black;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); font-size: 36px;">Shooter2</h1>
+    <canvas id="canvas" width="1200" height="800"></canvas>
+    <button id="startButton" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 24px;">Start Game</button>
+    <script>
+        // Variable Declarations
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        let FPS = 60;
+        let PLAYER_SPEED = 5;
+        let PLAYER_SIZE = 20;
+        let BULLET_SPEED = 10;
+        let BULLET_SIZE = 5;
+        let ENEMY_SPEED = 2;
+        let ENEMY_SIZE = 20;
+        let ENEMY_SPAWN_RATE = 0.02;
+        let gameRunning = false;
+        let retryButton = null;
+        let gameOverHandled = false;  // Flag to handle game over only once
+
+        // Game State
+        const player = { x: canvas.width / 2, y: canvas.height / 2, angle: 0 };
+        let bullets = [];
+        let enemies = [];
+        let keys = {};
+        let score = 0;
+        let gameOverFlag = false;
+        let canShoot = true;
+        let fireRate = 500;
+        let shooting = false;
+
+        // Event Listeners
+        canvas.addEventListener("mousemove", e => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            player.angle = Math.atan2(mouseY - player.y, mouseX - player.x);
+        });
+
+        canvas.addEventListener("mousedown", e => { if (e.button === 0) shooting = true; });
+        canvas.addEventListener("mouseup", e => { if (e.button === 0) shooting = false; });
+
+        document.addEventListener("keydown", e => { keys[e.code] = true; });
+        document.addEventListener("keyup", e => { keys[e.code] = false; });
+
+        // Enemy spawning at the edge of the canvas
+        function spawnEnemyAtEdge() {
+            const edge = Math.floor(Math.random() * 4); // 0: top, 1: right, 2: bottom, 3: left
+            let x, y;
+            switch (edge) {
+                case 0: // Top edge
+                    x = Math.random() * canvas.width;
+                    y = 0;
+                    break;
+                case 1: // Right edge
+                    x = canvas.width;
+                    y = Math.random() * canvas.height;
+                    break;
+                case 2: // Bottom edge
+                    x = Math.random() * canvas.width;
+                    y = canvas.height;
+                    break;
+                case 3: // Left edge
+                    x = 0;
+                    y = Math.random() * canvas.height;
+                    break;
+            }
+            enemies.push({ x: x, y: y, angle: 0 });
+        }
+        
+        // Game Functions
+        function startGame() {
+            if (retryButton) {
+                document.body.removeChild(retryButton);
+                retryButton = null;
+            }
+            gameRunning = true;
+            gameOverHandled = false; // Reset the game-over handle flag
+            document.getElementById("startButton").style.display = "none";
+            gameLoop();
+        }
+
+        function update() {
+            if (gameOverFlag && gameRunning) {
+                handleGameOver();
+                gameRunning = false;
+                return;
+            }
+
+            if (keys["ArrowUp"] || keys["KeyW"]) player.y = Math.max(player.y - PLAYER_SPEED, 0);
+            if (keys["ArrowDown"] || keys["KeyS"]) player.y = Math.min(player.y + PLAYER_SPEED, canvas.height);
+            if (keys["ArrowLeft"] || keys["KeyA"]) player.x = Math.max(player.x - PLAYER_SPEED, 0);
+            if (keys["ArrowRight"] || keys["KeyD"]) player.x = Math.min(player.x + PLAYER_SPEED, canvas.width);
+
+            if (shooting && canShoot) {
+                bullets.push({ x: player.x, y: player.y, angle: player.angle });
+                canShoot = false;
+                setTimeout(() => { canShoot = true; }, fireRate);
+            }
+
+            // Bullet movement and boundary check
+            for (let i = 0; i < bullets.length; i++) {
+                let bullet = bullets[i];
+                bullet.x += Math.cos(bullet.angle) * BULLET_SPEED;
+                bullet.y += Math.sin(bullet.angle) * BULLET_SPEED;
+                if (bullet.x < 0 || bullet.x > canvas.width || bullet.y < 0 || bullet.y > canvas.height) {
+                    bullets.splice(i, 1);
+                    i--;
+                }
+            }
+
+            // Enemy spawning
+            if (Math.random() < ENEMY_SPAWN_RATE) {
+                spawnEnemyAtEdge();
+            }
+
+            // Enemy movement and collision with bullets
+            for (let i = 0; i < enemies.length; i++) {
+                let enemy = enemies[i];
+                enemy.angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+                enemy.x += Math.cos(enemy.angle) * ENEMY_SPEED;
+                enemy.y += Math.sin(enemy.angle) * ENEMY_SPEED;
+
+                // Enemy-player collision
+                let dx1 = enemy.x - player.x;
+                let dy1 = enemy.y - player.y;
+                let distance1 = Math.sqrt(dx1 * dx1 + dy1 * dy1);
+                if (distance1 < ENEMY_SIZE / 2 + PLAYER_SIZE / 2) {
+                    gameOverFlag = true;
+                    handleGameOver();
+                    return;
+                }
+
+                // Enemy-bullet collision
+                for (let j = 0; j < bullets.length; j++) {
+                    let bullet = bullets[j];
+                    let dx2 = enemy.x - bullet.x;
+                    let dy2 = enemy.y - bullet.y;
+                    let distance2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+                    if (distance2 < ENEMY_SIZE / 2 + BULLET_SIZE / 2) {
+                        enemies.splice(i, 1);
+                        bullets.splice(j, 1);
+                        score++;
+                        i--;
+                        break;
+                    }
+                }
+            }
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas at the beginning of each frame
+            update();
+
+            // Draw player
+            ctx.fillStyle = "green";
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, PLAYER_SIZE / 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw bullets
+            ctx.fillStyle = "blue";
+            bullets.forEach(bullet => {
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, BULLET_SIZE / 2, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Draw enemies
+            ctx.fillStyle = "red";
+            enemies.forEach(enemy => {
+                ctx.beginPath();
+                ctx.arc(enemy.x, enemy.y, ENEMY_SIZE / 2, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Draw score
+            ctx.fillStyle = "black";
+            ctx.font = "24px Arial";
+            ctx.fillText(`Score: ${score}`, 10, 30);
+
+            if (gameOverFlag && !gameOverHandled) {
+                handleGameOver();
+                gameOverHandled = true;
+            }
+
+            if (gameRunning) requestAnimationFrame(gameLoop);
+        }
+
+        function handleGameOver() {
+            if (gameOverHandled) return;
+
+            // Clear the canvas here to remove all previous game elements
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw the "Game Over" text and retry button here
+            ctx.fillStyle = "black";
+            ctx.font = "36px Arial";
+            ctx.fillText("Game Over", canvas.width / 2 - 80, canvas.height / 2 - 20);
+            ctx.font = "24px Arial";
+            ctx.fillText(`Your Score: ${score}`, canvas.width / 2 - 60, canvas.height / 2 + 20);
+
+            // Retry button
+            retryButton = document.createElement("button");
+            retryButton.textContent = "Retry";
+            retryButton.style.position = "absolute";
+            retryButton.style.top = "60%";
+            retryButton.style.left = "50%";
+            retryButton.style.transform = "translate(-50%, -50%)";
+            retryButton.style.fontSize = "24px";
+            retryButton.addEventListener("click", restartGame, { once: true }); // Use { once: true } to remove the event listener after one click
+            document.body.appendChild(retryButton);
+
+            // Mark the game as not running and game over handled
+            gameRunning = false;
+            gameOverHandled = true;
+        }
+
+        function restartGame() {
+            gameOverHandled = false;
+            if (retryButton) {
+                document.body.removeChild(retryButton);
+                retryButton = null;
+            }
+            gameRunning = true;
+            gameOverFlag = false;
+            score = 0;
+            bullets = [];
+            enemies = [];
+            player.x = canvas.width / 2;
+            player.y = canvas.height / 2;
+            player.angle = 0;
+
+            // Clear the canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Start the game loop
+            gameLoop();
+        }
+
+        document.getElementById("startButton").addEventListener("click", startGame);
+    </script>
+</body>
+</html>
