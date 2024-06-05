@@ -5,142 +5,296 @@
     <title>Shooter Game</title>
     <style>
         * { margin: 0; padding: 0; }
+        body { overflow: hidden; } /* Prevent scrolling */
         canvas {
             display: block;
             position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            max-width: 100%;
-            max-height: 100%;
             border: 5px solid black;
+        }
+        #powerUpBars {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            display: flex;
+            gap: 5px;
+        }
+        .powerUpBar {
+            width: 100px;
+            height: 10px;
+            background-color: green;
+            border: 1px solid black;
         }
     </style>
 </head>
 <body>
-    <h1 style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); font-size: 36px;">Shooter2</h1>
-    <canvas id="canvas" width="1200" height="800"></canvas>
+    <h1 style="position: absolute; top: 50px; left: 50%; transform: translateX(-50%); font-size: 36px;">Shooter3</h1>
+    <canvas id="canvas"></canvas>
     <button id="startButton" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 24px;">Start Game</button>
+    <div id="powerUpBars"></div>
     <script>
-        // Variable Declarations
         const canvas = document.getElementById("canvas");
         const ctx = canvas.getContext("2d");
-        let FPS = 60;
-        let PLAYER_SPEED = 5;
-        let PLAYER_SIZE = 20;
-        let BULLET_SPEED = 10;
-        let BULLET_SIZE = 5;
-        let ENEMY_SPEED = 2;
-        let ENEMY_SIZE = 20;
-        let ENEMY_SPAWN_RATE = 0.02;
-        let gameRunning = false;
-        let retryButton = null;
-        let gameOverHandled = false;  // Flag to handle game over only once
+        const powerUpBars = document.getElementById("powerUpBars");
 
-        // Game State
-        const player = { x: canvas.width / 2, y: canvas.height / 2, angle: 0 };
+        // Define constants and variables
+        const FPS = 60;
+        const PLAYER_SIZE = 20;
+        const BULLET_SIZE = 5;
+        const ENEMY_SIZE = 20;
+        const POWER_UP_SIZE = 15;
+        const PLAYER_SPEED = 5;
+        const BULLET_SPEED = 10;
+        const ENEMY_SPEED = 2;
+        const ENEMY_SPAWN_RATE = 0.05;
+        const POWER_UP_LIFETIME = 5000; // 5 seconds
+        const POWER_UP_SPAWN_TIME = 7000; // 7 seconds
+        const POWER_UP_BAR_UPDATE_INTERVAL = 100; // Update interval for power-up bars in ms
+        const WEAPON_SIZE = 20;
+        const WEAPON_DESPAWN_TIME = 10000; // 10 seconds
+        const WEAPON_SPAWN_CHANCE = 0.3; // 30% chance
+        const WEAPONS = [
+            {
+                type: 'pistol',
+                color: 'black',
+                fireRate: 500, // 2 shots per second
+                numShots: 1
+            },
+            {
+                type: 'uzi',
+                color: 'blue',
+                fireRate: 200, // 5 shots per second
+                numShots: 1
+            },
+            {
+                type: 'shotgun',
+                color: 'red',
+                fireRate: 1000, // 1 shot per second
+                numShots: 5,
+                spreadAngle: Math.PI / 12 // 15-degree cone
+            }
+        ];
+        const POWER_UP_TYPES = [
+            {
+                type: 'movement_speed',
+                color: 'green',
+                effectDuration: 5000, // 5 seconds
+                effect: (playerObj) => {
+                    const boostedSpeed = playerObj.speed * 1.5;
+                    playerObj.speed = Math.min(boostedSpeed, PLAYER_SPEED * 1.5); // Limit to max boost speed
+                },
+                removeEffect: (playerObj) => {
+                    playerObj.speed = PLAYER_SPEED; // Restore the original speed
+                }
+            },
+            {
+                type: 'knife_boost',
+                color: 'yellow',
+                effectDuration: 5000, // 5 seconds
+                effect: (playerObj) => {
+                    playerObj.knifeBoost = true;
+                },
+                removeEffect: (playerObj) => {
+                    playerObj.knifeBoost = false;
+                }
+            },
+            {
+                type: 'double_firing_rate',
+                color: 'purple',
+                effectDuration: 3000, // 3 seconds
+                effect: (playerObj) => {
+                    playerObj.doubleFiringRate = true;
+                },
+                removeEffect: (playerObj) => {
+                    playerObj.doubleFiringRate = false;
+                }
+            }
+        ];
+        let gameRunning = false;
+        let player = null;
         let bullets = [];
         let enemies = [];
         let keys = {};
         let score = 0;
-        let gameOverFlag = false;
         let canShoot = true;
-        let fireRate = 500;
         let shooting = false;
+        let gameOverFlag = false;
+        let gameOverHandled = false;
+        let retryButton = null;
+        let weaponSpawnTimer = null;
+        let powerUpSpawnTimer = null;
+        const activePowerUps = [];
+        const activeWeapons = [];
+        const powerUpTimers = {}; // Store timers for active power-ups
+        const weaponTimers = {}; // Store timers for active weapons
 
-        // Event Listeners
-        canvas.addEventListener("mousemove", e => {
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-            player.angle = Math.atan2(mouseY - player.y, mouseX - player.x);
-        });
+        // Functions for creating and updating objects
+        function createPlayer() {
+            return {
+                x: canvas.width / 2,
+                y: canvas.height / 2,
+                angle: 0,
+                speed: PLAYER_SPEED,
+                currentWeaponIndex: 0,
+                knifeBoost: false,
+                doubleFiringRate: false,
+                gunType: 'default'
+            };
+        }
 
-        canvas.addEventListener("mousedown", e => { if (e.button === 0) shooting = true; });
-        canvas.addEventListener("mouseup", e => { if (e.button === 0) shooting = false; });
-
-        document.addEventListener("keydown", e => { keys[e.code] = true; });
-        document.addEventListener("keyup", e => { keys[e.code] = false; });
-
-        // Enemy spawning at the edge of the canvas
         function spawnEnemyAtEdge() {
-            const edge = Math.floor(Math.random() * 4); // 0: top, 1: right, 2: bottom, 3: left
+            const edge = Math.floor(Math.random() * 4);
             let x, y;
             switch (edge) {
-                case 0: // Top edge
+                case 0:
                     x = Math.random() * canvas.width;
                     y = 0;
                     break;
-                case 1: // Right edge
+                case 1:
                     x = canvas.width;
                     y = Math.random() * canvas.height;
                     break;
-                case 2: // Bottom edge
+                case 2:
                     x = Math.random() * canvas.width;
                     y = canvas.height;
                     break;
-                case 3: // Left edge
+                case 3:
                     x = 0;
                     y = Math.random() * canvas.height;
                     break;
             }
             enemies.push({ x: x, y: y, angle: 0 });
         }
-        
-        // Game Functions
-        function startGame() {
-            if (retryButton) {
-                document.body.removeChild(retryButton);
-                retryButton = null;
+
+        function spawnPowerUp(x, y) {
+            const chance = Math.random();
+            let cumulativeSpawnRate = 0;
+            for (const powerUpType of POWER_UP_TYPES) {
+                cumulativeSpawnRate += powerUpType.spawnRate;
+                if (chance < cumulativeSpawnRate) {
+                    const powerUpX = x;
+                    const powerUpY = y;
+                    activePowerUps.push({ x: powerUpX, y: powerUpY, ...powerUpType, startTime: performance.now(), applied: false });
+                    break;
+                }
             }
-            gameRunning = true;
-            gameOverHandled = false; // Reset the game-over handle flag
-            document.getElementById("startButton").style.display = "none";
-            gameLoop();
         }
 
-        function update() {
+        function spawnWeapon(x, y) {
+            const randomWeapon = WEAPONS[Math.floor(Math.random() * WEAPONS.length)];
+            const weapon = { x, y, type: randomWeapon.type, color: randomWeapon.color, spawnTime: performance.now() };
+            activeWeapons.push(weapon);
+            weaponTimers[weapon.type] = setTimeout(() => {
+                const index = activeWeapons.indexOf(weapon);
+                if (index !== -1) {
+                    activeWeapons.splice(index, 1);
+                }
+            }, WEAPON_DESPAWN_TIME);
+        }
+
+        function removePowerUpEffect(playerObj, powerUpType) {
+            if (powerUpType.removeEffect) {
+                powerUpType.removeEffect(playerObj);
+            }
+            const timerId = powerUpTimers[powerUpType.type];
+            if (timerId) {
+                clearTimeout(timerId);
+                delete powerUpTimers[powerUpType.type];
+            }
+        }
+
+        function checkPowerUpCollisions(playerObj) {
+            for (let i = activePowerUps.length - 1; i >= 0; i--) {
+                const powerUpType = activePowerUps[i];
+                const dx = powerUpType.x - playerObj.x;
+                const dy = powerUpType.y - playerObj.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < PLAYER_SIZE / 2 + POWER_UP_SIZE / 2) {
+                    applyPowerUpEffect(playerObj, powerUpType);
+                    activePowerUps.splice(i, 1); // Remove the power-up once collected
+                }
+            }
+        }
+
+        function checkWeaponCollisions(playerObj) {
+            for (let i = activeWeapons.length - 1; i >= 0; i--) {
+                const weapon = activeWeapons[i];
+                const dx = weapon.x - playerObj.x;
+                const dy = weapon.y - playerObj.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < PLAYER_SIZE / 2 + WEAPON_SIZE / 2) {
+                    playerObj.gunType = weapon.type;
+                    activeWeapons.splice(i, 1); // Remove the weapon once collected
+                }
+            }
+        }
+
+        function applyPowerUpEffect(playerObj, powerUpType) {
+            if (powerUpType.effect) {
+                powerUpType.effect(playerObj);
+                powerUpTimers[powerUpType.type] = setTimeout(() => {
+                    removePowerUpEffect(playerObj, powerUpType);
+                }, powerUpType.effectDuration);
+            }
+        }
+
+        function shoot(playerObj) {
+            const weapon = WEAPONS.find(w => w.type === playerObj.gunType) || WEAPONS[0];
+            const numShots = playerObj.doubleFiringRate ? weapon.numShots * 2 : weapon.numShots;
+            if (weapon.type === 'shotgun') {
+                for (let i = 0; i < numShots; i++) {
+                    const spreadAngle = weapon.spreadAngle * (Math.random() - 0.5);
+                    bullets.push({ x: playerObj.x, y: playerObj.y, angle: playerObj.angle + spreadAngle });
+                }
+            } else {
+                bullets.push({ x: playerObj.x, y: playerObj.y, angle: playerObj.angle });
+            }
+        }
+
+        function getFiringRate(playerObj) {
+            const weapon = WEAPONS.find(w => w.type === playerObj.gunType) || WEAPONS[0];
+            const baseRate = weapon.fireRate;
+            return playerObj.doubleFiringRate ? baseRate / 2 : baseRate;
+        }
+
+        function update(timestamp) {
             if (gameOverFlag && gameRunning) {
                 handleGameOver();
                 gameRunning = false;
                 return;
             }
 
-            if (keys["ArrowUp"] || keys["KeyW"]) player.y = Math.max(player.y - PLAYER_SPEED, 0);
-            if (keys["ArrowDown"] || keys["KeyS"]) player.y = Math.min(player.y + PLAYER_SPEED, canvas.height);
-            if (keys["ArrowLeft"] || keys["KeyA"]) player.x = Math.max(player.x - PLAYER_SPEED, 0);
-            if (keys["ArrowRight"] || keys["KeyD"]) player.x = Math.min(player.x + PLAYER_SPEED, canvas.width);
+            if (keys["ArrowUp"] || keys["KeyW"]) player.y = Math.max(player.y - player.speed, 0);
+            if (keys["ArrowDown"] || keys["KeyS"]) player.y = Math.min(player.y + player.speed, canvas.height);
+            if (keys["ArrowLeft"] || keys["KeyA"]) player.x = Math.max(player.x - player.speed, 0);
+            if (keys["ArrowRight"] || keys["KeyD"]) player.x = Math.min(player.x + player.speed, canvas.width);
 
             if (shooting && canShoot) {
-                bullets.push({ x: player.x, y: player.y, angle: player.angle });
+                shoot(player);
                 canShoot = false;
-                setTimeout(() => { canShoot = true; }, fireRate);
+                setTimeout(() => { canShoot = true; }, getFiringRate(player));
             }
 
-            // Bullet movement and boundary check
-            for (let i = 0; i < bullets.length; i++) {
-                let bullet = bullets[i];
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const bullet = bullets[i];
                 bullet.x += Math.cos(bullet.angle) * BULLET_SPEED;
                 bullet.y += Math.sin(bullet.angle) * BULLET_SPEED;
                 if (bullet.x < 0 || bullet.x > canvas.width || bullet.y < 0 || bullet.y > canvas.height) {
                     bullets.splice(i, 1);
-                    i--;
                 }
             }
 
-            // Enemy spawning
             if (Math.random() < ENEMY_SPAWN_RATE) {
                 spawnEnemyAtEdge();
             }
 
-            // Enemy movement and collision with bullets
-            for (let i = 0; i < enemies.length; i++) {
-                let enemy = enemies[i];
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
                 enemy.angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
                 enemy.x += Math.cos(enemy.angle) * ENEMY_SPEED;
                 enemy.y += Math.sin(enemy.angle) * ENEMY_SPEED;
 
-                // Enemy-player collision
                 let dx1 = enemy.x - player.x;
                 let dy1 = enemy.y - player.y;
                 let distance1 = Math.sqrt(dx1 * dx1 + dy1 * dy1);
@@ -150,9 +304,8 @@
                     return;
                 }
 
-                // Enemy-bullet collision
-                for (let j = 0; j < bullets.length; j++) {
-                    let bullet = bullets[j];
+                for (let j = bullets.length - 1; j >= 0; j--) {
+                    const bullet = bullets[j];
                     let dx2 = enemy.x - bullet.x;
                     let dy2 = enemy.y - bullet.y;
                     let distance2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
@@ -160,24 +313,28 @@
                         enemies.splice(i, 1);
                         bullets.splice(j, 1);
                         score++;
+                        spawnPowerUp(enemy.x, enemy.y);
+                        if (Math.random() < WEAPON_SPAWN_CHANCE) {
+                            spawnWeapon(enemy.x, enemy.y);
+                        }
                         i--;
                         break;
                     }
                 }
             }
+
+            checkPowerUpCollisions(player);
+            checkWeaponCollisions(player);
         }
 
-        function gameLoop() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas at the beginning of each frame
-            update();
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Draw player
             ctx.fillStyle = "green";
             ctx.beginPath();
             ctx.arc(player.x, player.y, PLAYER_SIZE / 2, 0, Math.PI * 2);
             ctx.fill();
 
-            // Draw bullets
             ctx.fillStyle = "blue";
             bullets.forEach(bullet => {
                 ctx.beginPath();
@@ -185,7 +342,6 @@
                 ctx.fill();
             });
 
-            // Draw enemies
             ctx.fillStyle = "red";
             enemies.forEach(enemy => {
                 ctx.beginPath();
@@ -193,33 +349,100 @@
                 ctx.fill();
             });
 
-            // Draw score
             ctx.fillStyle = "black";
             ctx.font = "24px Arial";
             ctx.fillText(`Score: ${score}`, 10, 30);
 
-            if (gameOverFlag && !gameOverHandled) {
-                handleGameOver();
-                gameOverHandled = true;
-            }
+            drawPowerUps();
+            drawWeapons();
+        }
 
-            if (gameRunning) requestAnimationFrame(gameLoop);
+        function drawPowerUps() {
+            for (const powerUpType of activePowerUps) {
+                if (!powerUpType.applied) {
+                    ctx.fillStyle = powerUpType.color;
+                    ctx.beginPath();
+                    ctx.arc(powerUpType.x, powerUpType.y, POWER_UP_SIZE / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+
+        function drawWeapons() {
+            for (const weapon of activeWeapons) {
+                ctx.strokeStyle = weapon.color;
+                ctx.beginPath();
+                ctx.arc(weapon.x, weapon.y, WEAPON_SIZE / 2, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+
+        function drawPowerUpBars() {
+            powerUpBars.innerHTML = '';
+            activePowerUps.forEach(powerUpType => {
+                if (powerUpType.applied) {
+                    const progress = (performance.now() - powerUpType.startTime) / powerUpType.effectDuration;
+                    const progressPercentage = Math.min(100, progress * 100);
+                    const powerUpBar = document.createElement("div");
+                    powerUpBar.className = "powerUpBar";
+                    powerUpBar.style.width = `${progressPercentage}%`;
+                    powerUpBar.style.backgroundColor = powerUpType.color;
+                    powerUpBars.appendChild(powerUpBar);
+                }
+            });
+        }
+
+        function gameLoop(timestamp) {
+            update(timestamp);
+            draw();
+            drawPowerUpBars();
+
+            if (gameRunning) {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        function startPowerUpSpawnTimer() {
+            powerUpSpawnTimer = setInterval(() => {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height;
+                spawnPowerUp(x, y);
+            }, POWER_UP_SPAWN_TIME);
+        }
+
+        function stopTimers() {
+            clearTimeouts(powerUpTimers);
+            clearTimeouts(weaponTimers);
+            clearInterval(weaponSpawnTimer);
+            clearInterval(powerUpSpawnTimer);
+        }
+
+        function startGame() {
+            if (retryButton) {
+                document.body.removeChild(retryButton);
+                retryButton = null;
+            }
+            gameRunning = true;
+            player = createPlayer();
+            startPowerUpSpawnTimer();
+            bullets = [];
+            enemies = [];
+            score = 0;
+            gameOverFlag = false;
+            gameOverHandled = false;
+            document.getElementById("startButton").style.display = "none";
+            gameLoop(performance.now());
         }
 
         function handleGameOver() {
             if (gameOverHandled) return;
 
-            // Clear the canvas here to remove all previous game elements
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Draw the "Game Over" text and retry button here
             ctx.fillStyle = "black";
             ctx.font = "36px Arial";
             ctx.fillText("Game Over", canvas.width / 2 - 80, canvas.height / 2 - 20);
             ctx.font = "24px Arial";
             ctx.fillText(`Your Score: ${score}`, canvas.width / 2 - 60, canvas.height / 2 + 20);
 
-            // Retry button
             retryButton = document.createElement("button");
             retryButton.textContent = "Retry";
             retryButton.style.position = "absolute";
@@ -227,10 +450,9 @@
             retryButton.style.left = "50%";
             retryButton.style.transform = "translate(-50%, -50%)";
             retryButton.style.fontSize = "24px";
-            retryButton.addEventListener("click", restartGame, { once: true }); // Use { once: true } to remove the event listener after one click
+            retryButton.addEventListener("click", restartGame, { once: true });
             document.body.appendChild(retryButton);
 
-            // Mark the game as not running and game over handled
             gameRunning = false;
             gameOverHandled = true;
         }
@@ -244,20 +466,61 @@
             gameRunning = true;
             gameOverFlag = false;
             score = 0;
+            player = createPlayer();
             bullets = [];
             enemies = [];
-            player.x = canvas.width / 2;
-            player.y = canvas.height / 2;
-            player.angle = 0;
-
-            // Clear the canvas
+            activePowerUps.length = 0; // Clear active power-ups
+            activeWeapons.length = 0; // Clear active weapons
+            stopTimers();
+            startPowerUpSpawnTimer();
+            clearTimeouts(powerUpTimers);
+            clearTimeouts(weaponTimers);
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Start the game loop
-            gameLoop();
+            gameLoop(performance.now());
         }
 
+        function clearTimeouts(timerObj) {
+            for (const timerId in timerObj) {
+                clearTimeout(timerObj[timerId]);
+            }
+        }
+
+        window.addEventListener("resize", () => {
+            resizeCanvas();
+            if (player) {
+                player.x = canvas.width / 2;
+                player.y = canvas.height / 2;
+            }
+        });
+
+        document.addEventListener("keydown", e => { keys[e.code] = true; });
+        document.addEventListener("keyup", e => { keys[e.code] = false; });
+        canvas.addEventListener("mousemove", e => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            if (player) {
+                player.angle = Math.atan2(mouseY - player.y, mouseX - player.x);
+            }
+        });
+        canvas.addEventListener("mousedown", e => { if (e.button === 0) { shooting = true; } });
+        canvas.addEventListener("mouseup", e => { if (e.button === 0) { shooting = false; } });
+
         document.getElementById("startButton").addEventListener("click", startGame);
+
+        function resizeCanvas() {
+            const canvasWidth = window.innerWidth - 50;
+            const canvasHeight = window.innerHeight - 50;
+            const canvasLeft = (window.innerWidth - canvasWidth) / 2;
+            const canvasTop = (window.innerHeight - canvasHeight) / 2;
+
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            canvas.style.left = `${canvasLeft}px`;
+            canvas.style.top = `${canvasTop}px`;
+        }
+
+        resizeCanvas();
     </script>
 </body>
 </html>
