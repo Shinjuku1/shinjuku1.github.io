@@ -2,27 +2,23 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Shooter Game</title>
+    <title>Shooter</title>
     <style>
         * { margin: 0; padding: 0; }
-        body { overflow: hidden; } /* Prevent scrolling */
+        body { overflow: hidden; background-color: black; } /* Prevent scrolling and set background color */
         canvas {
             display: block;
             position: absolute;
-            border: 5px solid black;
+            border: 5px solid white;
         }
-        #powerUpBars {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            display: flex;
-            gap: 5px;
+        h1 {
+            color: white;
         }
-        .powerUpBar {
-            width: 100px;
-            height: 10px;
-            background-color: green;
-            border: 1px solid black;
+        button {
+            color: white;
+            background-color: black;
+            border: 2px solid white;
+            padding: 10px 20px;
         }
     </style>
 </head>
@@ -30,11 +26,9 @@
     <h1 style="position: absolute; top: 50px; left: 50%; transform: translateX(-50%); font-size: 36px;">Shooter3</h1>
     <canvas id="canvas"></canvas>
     <button id="startButton" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 24px;">Start Game</button>
-    <div id="powerUpBars"></div>
     <script>
         const canvas = document.getElementById("canvas");
         const ctx = canvas.getContext("2d");
-        const powerUpBars = document.getElementById("powerUpBars");
 
         // Define constants and variables
         const FPS = 60;
@@ -48,35 +42,47 @@
         const ENEMY_SPAWN_RATE = 0.05;
         const POWER_UP_LIFETIME = 5000; // 5 seconds
         const POWER_UP_SPAWN_TIME = 7000; // 7 seconds
-        const POWER_UP_BAR_UPDATE_INTERVAL = 100; // Update interval for power-up bars in ms
         const WEAPON_SIZE = 20;
         const WEAPON_DESPAWN_TIME = 10000; // 10 seconds
         const WEAPON_SPAWN_CHANCE = 0.3; // 30% chance
+        const POWER_UP_SPAWN_CHANCE = 0.2; // 20% chance
+
+        const COLORS = {
+            pistol: 'gray',
+            uzi: 'blue',
+            shotgun: 'red',
+            movement_speed: 'green',
+            knife_boost: 'yellow',
+            double_firing_rate: 'purple'
+        };
+
         const WEAPONS = [
             {
                 type: 'pistol',
-                color: 'black',
+                color: COLORS.pistol,
                 fireRate: 500, // 2 shots per second
                 numShots: 1
             },
             {
                 type: 'uzi',
-                color: 'blue',
+                color: COLORS.uzi,
                 fireRate: 200, // 5 shots per second
                 numShots: 1
             },
             {
                 type: 'shotgun',
-                color: 'red',
+                color: COLORS.shotgun,
                 fireRate: 1000, // 1 shot per second
                 numShots: 5,
                 spreadAngle: Math.PI / 12 // 15-degree cone
-            }
+            },
+            // Add more weapons here
         ];
+
         const POWER_UP_TYPES = [
             {
                 type: 'movement_speed',
-                color: 'green',
+                color: COLORS.movement_speed,
                 effectDuration: 5000, // 5 seconds
                 effect: (playerObj) => {
                     const boostedSpeed = playerObj.speed * 1.5;
@@ -88,7 +94,7 @@
             },
             {
                 type: 'knife_boost',
-                color: 'yellow',
+                color: COLORS.knife_boost,
                 effectDuration: 5000, // 5 seconds
                 effect: (playerObj) => {
                     playerObj.knifeBoost = true;
@@ -99,7 +105,7 @@
             },
             {
                 type: 'double_firing_rate',
-                color: 'purple',
+                color: COLORS.double_firing_rate,
                 effectDuration: 3000, // 3 seconds
                 effect: (playerObj) => {
                     playerObj.doubleFiringRate = true;
@@ -107,8 +113,10 @@
                 removeEffect: (playerObj) => {
                     playerObj.doubleFiringRate = false;
                 }
-            }
+            },
+            // Add more power-ups here
         ];
+
         let gameRunning = false;
         let player = null;
         let bullets = [];
@@ -166,29 +174,31 @@
         }
 
         function spawnPowerUp(x, y) {
-            const chance = Math.random();
-            let cumulativeSpawnRate = 0;
-            for (const powerUpType of POWER_UP_TYPES) {
-                cumulativeSpawnRate += powerUpType.spawnRate;
-                if (chance < cumulativeSpawnRate) {
-                    const powerUpX = x;
-                    const powerUpY = y;
-                    activePowerUps.push({ x: powerUpX, y: powerUpY, ...powerUpType, startTime: performance.now(), applied: false });
-                    break;
-                }
+            if (Math.random() < POWER_UP_SPAWN_CHANCE) {
+                const randomPowerUp = POWER_UP_TYPES[Math.floor(Math.random() * POWER_UP_TYPES.length)];
+                const powerUp = { x, y, ...randomPowerUp, startTime: performance.now(), applied: false };
+                activePowerUps.push(powerUp);
+                powerUpTimers[powerUp.type] = setTimeout(() => {
+                    const index = activePowerUps.indexOf(powerUp);
+                    if (index !== -1) {
+                        activePowerUps.splice(index, 1);
+                    }
+                }, POWER_UP_LIFETIME);
             }
         }
 
         function spawnWeapon(x, y) {
-            const randomWeapon = WEAPONS[Math.floor(Math.random() * WEAPONS.length)];
-            const weapon = { x, y, type: randomWeapon.type, color: randomWeapon.color, spawnTime: performance.now() };
-            activeWeapons.push(weapon);
-            weaponTimers[weapon.type] = setTimeout(() => {
-                const index = activeWeapons.indexOf(weapon);
-                if (index !== -1) {
-                    activeWeapons.splice(index, 1);
-                }
-            }, WEAPON_DESPAWN_TIME);
+            if (Math.random() < WEAPON_SPAWN_CHANCE) {
+                const randomWeapon = WEAPONS[Math.floor(Math.random() * WEAPONS.length)];
+                const weapon = { x, y, type: randomWeapon.type, color: randomWeapon.color, spawnTime: performance.now() };
+                activeWeapons.push(weapon);
+                weaponTimers[weapon.type] = setTimeout(() => {
+                    const index = activeWeapons.indexOf(weapon);
+                    if (index !== -1) {
+                        activeWeapons.splice(index, 1);
+                    }
+                }, WEAPON_DESPAWN_TIME);
+            }
         }
 
         function removePowerUpEffect(playerObj, powerUpType) {
@@ -314,9 +324,7 @@
                         bullets.splice(j, 1);
                         score++;
                         spawnPowerUp(enemy.x, enemy.y);
-                        if (Math.random() < WEAPON_SPAWN_CHANCE) {
-                            spawnWeapon(enemy.x, enemy.y);
-                        }
+                        spawnWeapon(enemy.x, enemy.y);
                         i--;
                         break;
                     }
@@ -335,7 +343,7 @@
             ctx.arc(player.x, player.y, PLAYER_SIZE / 2, 0, Math.PI * 2);
             ctx.fill();
 
-            ctx.fillStyle = "blue";
+            ctx.fillStyle = "white";
             bullets.forEach(bullet => {
                 ctx.beginPath();
                 ctx.arc(bullet.x, bullet.y, BULLET_SIZE / 2, 0, Math.PI * 2);
@@ -349,7 +357,7 @@
                 ctx.fill();
             });
 
-            ctx.fillStyle = "black";
+            ctx.fillStyle = "white";
             ctx.font = "24px Arial";
             ctx.fillText(`Score: ${score}`, 10, 30);
 
@@ -377,25 +385,9 @@
             }
         }
 
-        function drawPowerUpBars() {
-            powerUpBars.innerHTML = '';
-            activePowerUps.forEach(powerUpType => {
-                if (powerUpType.applied) {
-                    const progress = (performance.now() - powerUpType.startTime) / powerUpType.effectDuration;
-                    const progressPercentage = Math.min(100, progress * 100);
-                    const powerUpBar = document.createElement("div");
-                    powerUpBar.className = "powerUpBar";
-                    powerUpBar.style.width = `${progressPercentage}%`;
-                    powerUpBar.style.backgroundColor = powerUpType.color;
-                    powerUpBars.appendChild(powerUpBar);
-                }
-            });
-        }
-
         function gameLoop(timestamp) {
             update(timestamp);
             draw();
-            drawPowerUpBars();
 
             if (gameRunning) {
                 requestAnimationFrame(gameLoop);
@@ -437,7 +429,7 @@
         function handleGameOver() {
             if (gameOverHandled) return;
 
-            ctx.fillStyle = "black";
+            ctx.fillStyle = "white";
             ctx.font = "36px Arial";
             ctx.fillText("Game Over", canvas.width / 2 - 80, canvas.height / 2 - 20);
             ctx.font = "24px Arial";
