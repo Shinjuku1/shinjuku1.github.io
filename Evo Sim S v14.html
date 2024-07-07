@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evolutionary Odyssey</title>
+    <style>
+        body, html { 
+            margin: 0; 
+            padding: 0; 
+            overflow: hidden; 
+            width: 100%; 
+            height: 100%; 
+            background-color: #000; 
+            user-select: none; 
+        }
+        canvas { 
+            display: block; 
+            border: none; 
+        }
+        .counter { 
+            position: absolute; 
+            top: 10px; 
+            color: white; 
+            font-family: Arial, sans-serif; 
+            font-size: 12px; 
+            user-select: none; 
+            pointer-events: none; /* Allow clicks to pass through */
+            transition: opacity 0.5s; /* Smooth fade transition */
+            opacity: 0; /* Start with hidden overlay */
+        }
+        #creatureCounter {
+            right: 10px;
+        }
+        #foodCounter {
+            right: 10px;
+            top: 30px;
+        }
+        #creatureStats {
+            left: 10px;
+            top: 10px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="simCanvas"></canvas>
+    <div id="creatureCounter" class="counter"></div>
+    <div id="foodCounter" class="counter"></div>
+    <div id="creatureStats" class="counter"></div>
+    <script>
+        // Configuration settings
+        const CONFIG = {
+            maxFoodItems: 500,
+            minFoodItems: 80,
+            maxCreatures: 200,
+            minCreatures: 50,
+            foodEnergy: 20,
+            maxFoodSize: 60,
+            minFoodSize: 0.2,
+            energyConsumptionRate: 10,
+            foodSpawnInterval: 1000,
+            visionRangeFactor: 10, // Vision range scaling factor
+            maxSpeed: 200,
+            maxEnergy: 2000,
+            baseMutationRate: 0.1,
+            colorDifferenceThreshold: 36,
+            foodGrowthRate: 0.2,
+            offspringEnergyFraction: 0.25,
+            absorptionRate: 5,
+            maxAILevel: 5,
+            sizeEnergyMultiplier: 1,  // Tunable parameter for size to energy multiplier
+            speedEnergyMultiplier: 5,  // Tunable parameter for speed to energy multiplier
+            maxAcceleration: 20,  // Tunable parameter for max acceleration
+            desiredAverageSpeed: 50, // Desired average speed for all creatures
+            baseEnergyLossRate: 0.1 // Base energy loss rate per distance unit
+        };
+
+        const CONST = {
+            targetCreatureCount: 150, // Example target count
+            adjustmentRate: 0.02, // Rate at which the energyConsumptionRate is adjusted
+            overlayFadeDelay: 10000 // Time in ms before the overlay fades out
+        };
+
+        // Canvas and context setup
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // UI elements
+        const creatureCounter = document.getElementById('creatureCounter');
+        const foodCounter = document.getElementById('foodCounter');
+        const creatureStats = document.getElementById('creatureStats');
+
+        // State variables
+        const creatures = [];
+        const foodItems = [];
+        let lastFoodSpawnTime = 0;
+        let currentSpawn = null;
+        let clickCount = 0;
+        let singleClickTimeout = null;
+        let kingCreature = null;
+        let lastClickedCreature = null;
+        let lastClickTime = 0;
+
+        // Resize canvas to fill window
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Utility functions
+        function randomColor() {
+            return `hsl(${Math.floor(Math.random() * 360)}, 100%, 50%)`;
+        }
+
+        function getColorHue(color) {
+            return parseInt(color.match(/\d+/)[0]);
+        }
+
+        function colorDifference(color1, color2) {
+            const hue1 = getColorHue(color1);
+            const hue2 = getColorHue(color2);
+            return Math.min(Math.abs(hue1 - hue2), 360 - Math.abs(hue1 - hue2));
+        }
+
+        function mutateColor(color) {
+            const hue = getColorHue(color);
+            const newHue = (hue + Math.floor(Math.random() * 72) - 36 + 360) % 360;
+            return `hsl(${newHue}, 100%, 50%)`;
+        }
+
+        function mutateValue(value, rate) {
+            return value + (Math.random() * 2 - 1) * rate * value;
+        }
+
+        function updateCounters() {
+            creatureCounter.textContent = `Creatures: ${creatures.length}`;
+            foodCounter.textContent = `Food: ${foodItems.length}`;
+        }
+
+        function updateCreatureStats() {
+            if (lastClickedCreature && lastClickedCreature.alive) {
+                creatureStats.textContent = `Creature Stats:\nSize: ${lastClickedCreature.size.toFixed(2)}\nEnergy: ${lastClickedCreature.energy.toFixed(2)}\nMax Energy: ${lastClickedCreature.maxEnergy.toFixed(2)}\nSpeed: ${lastClickedCreature.speed.toFixed(2)}\nAcceleration: ${lastClickedCreature.acceleration.toFixed(2)}\nEnergy Loss Rate: ${lastClickedCreature.energyLossRate.toFixed(5)}\nColor: ${lastClickedCreature.color}\nAI Level: ${lastClickedCreature.aiLevel}`;
+            } else {
+                creatureStats.textContent = '';
+            }
+        }
+
+        // Food class
+        class Food {
+            constructor(x, y, energy) {
+                this.x = x;
+                this.y = y;
+                this.energy = energy;
+                this.size = Math.sqrt(energy);
+                this.dragging = false;
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, 2 * Math.PI);
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+
+            handleInteractionStart(x, y) {
+                if (Math.hypot(x - this.x, y - this.y) < this.size) {
+                    this.dragging = true;
+                    this.dragStartX = x - this.x;
+                    this.dragStartY = y - this.y;
+                }
+            }
+
+            handleInteractionMove(x, y) {
+                if (this.dragging) {
+                    this.x = x - this.dragStartX;
+                    this.y = y - this.dragStartY;
+                    this.wrapAroundCanvas();
+                }
+            }
+
+            handleInteractionEnd() {
+                this.dragging = false;
+            }
+
+            handleDoubleClick(x, y) {
+                if (Math.hypot(x - this.x, y - this.y) < this.size) {
+                    spawnCreature(this.x, this.y);
+                    return true;
+                }
+                return false;
+            }
+
+            grow() {
+                if (this.size < CONFIG.maxFoodSize) {
+                    this.energy += CONFIG.foodGrowthRate;
+                    this.size = Math.sqrt(this.energy);
+                }
+            }
+
+            wrapAroundCanvas() {
+                if (this.x < 0) this.x = canvas.width;
+                if (this.x > canvas.width) this.x = 0;
+                if (this.y < 0) this.y = canvas.height;
+                if (this.y > canvas.height) this.y = 0;
+            }
+
+            isOutOfBounds() {
+                return (
+                    this.x < 0 || this.x > canvas.width ||
+                    this.y < 0 || this.y > canvas.height
+                );
+            }
+        }
+
+        // Creature class
+        class Creature {
+            constructor(x, y, traits = {}, parent = null) {
+                this.x = x;
+                this.y = y;
+                this.maxEnergy = traits.maxEnergy || Math.random() * CONFIG.maxEnergy;
+                this.reproductionThreshold = this.maxEnergy * 0.9;
+                this.energy = traits.energy || this.reproductionThreshold / 2;
+                this.size = Math.sqrt(this.energy) * CONFIG.sizeEnergyMultiplier;
+                this.color = traits.color || randomColor();
+                this.direction = Math.random() * 2 * Math.PI;
+                this.alive = true;
+                this.dragging = false;
+                this.lastClickTime = 0;
+                this.parent = parent;
+
+                // Speed, acceleration, and energy loss rate properties
+                this.speed = 0;
+                this.maxSpeed = traits.maxSpeed || CONFIG.maxSpeed * CONFIG.speedEnergyMultiplier / this.size;
+                this.acceleration = 0;
+                this.maxAcceleration = traits.maxAcceleration || CONFIG.maxAcceleration;
+                this.energyLossRate = traits.energyLossRate || CONFIG.baseEnergyLossRate;
+
+                this.visionRange = this.calculateVisionRange();
+                this.aiLevel = traits.aiLevel || 1;
+            }
+
+            calculateVisionRange() {
+                return this.size * CONFIG.visionRangeFactor; // Vision range scales with size
+            }
+
+            move(deltaTime) {
+                if (this.energy <= 0 || this.maxEnergy <= 0) {
+                    this.alive = false;
+                    return;
+                }
+
+                if (!this.dragging) {
+                    const speedScale = canvas.width / 1920; // Scale based on a 1920px wide screen
+
+                    // Update direction based on nearest food or danger
+                    const previousX = this.x;
+                    const previousY = this.y;
+                    const previousDirection = this.direction;
+                    this.seekFoodOrAvoidDanger();
+                    const angleChange = Math.abs(this.direction - previousDirection);
+                    const turnFactor = Math.max(0.1, 1 - angleChange / Math.PI);
+
+                    // Update acceleration and speed
+                    const targetSpeed = this.maxSpeed * turnFactor;
+                    if (this.speed < targetSpeed) {
+                        this.acceleration = Math.min(this.maxAcceleration, targetSpeed - this.speed);
+                    } else {
+                        this.acceleration = Math.max(-this.maxAcceleration, targetSpeed - this.speed);
+                    }
+                    this.speed += this.acceleration * deltaTime;
+                    this.speed = Math.max(0, Math.min(this.maxSpeed, this.speed));
+
+                    const moveStep = this.speed * deltaTime * speedScale;
+                    this.x += Math.cos(this.direction) * moveStep;
+                    this.y += Math.sin(this.direction) * moveStep;
+
+                    const distanceTraveled = Math.hypot(this.x - previousX, this.y - previousY);
+                    this.energy -= distanceTraveled * this.energyLossRate;
+
+                    this.wrapAroundCanvas();
+                    this.size = Math.sqrt(this.energy) * CONFIG.sizeEnergyMultiplier;
+                }
+            }
+
+            wrapAroundCanvas() {
+                if (this.x < 0) this.x = canvas.width;
+                if (this.x > canvas.width) this.x = 0;
+                if (this.y < 0) this.y = canvas.height;
+                if (this.y > canvas.height) this.y = 0;
+            }
+
+            seekFoodOrAvoidDanger() {
+                this.visionRange = this.calculateVisionRange();
+
+                let nearestFood = null;
+                let nearestFoodDistance = Infinity;
+                let nearestDanger = null;
+                let nearestDangerDistance = Infinity;
+                let nearestPrey = null;
+                let nearestPreyDistance = Infinity;
+
+                for (const food of foodItems) {
+                    const distance = Math.hypot(this.x - food.x, this.y - food.y);
+                    if (distance < nearestFoodDistance && distance <= this.visionRange) {
+                        nearestFoodDistance = distance;
+                        nearestFood = food;
+                    }
+                }
+
+                for (const creature of creatures) {
+                    const distance = Math.hypot(this.x - creature.x, this.y - creature.y);
+                    if (creature !== this) {
+                        if (creature.size > this.size && colorDifference(this.color, creature.color) > CONFIG.colorDifferenceThreshold && distance <= this.visionRange && distance < nearestDangerDistance) {
+                            nearestDangerDistance = distance;
+                            nearestDanger = creature;
+                        } else if (creature.size < this.size && colorDifference(this.color, creature.color) > CONFIG.colorDifferenceThreshold && distance <= this.visionRange && distance < nearestPreyDistance && creature.parent !== kingCreature) {
+                            nearestPreyDistance = distance;
+                            nearestPrey = creature;
+                        }
+                    }
+                }
+
+                if (this.aiLevel > 1) {
+                    // Higher AI level creatures use more complex logic
+                    if (nearestDanger) {
+                        this.direction = Math.atan2(this.y - nearestDanger.y, this.x - nearestDanger.x);
+                    } else if (nearestPrey) {
+                        this.direction = Math.atan2(nearestPrey.y - this.y, nearestPrey.x - this.x);
+                    } else if (nearestFood) {
+                        this.direction = Math.atan2(nearestFood.y - this.y, nearestFood.x - this.x);
+                    }
+                } else {
+                    // Lower AI level creatures use simpler logic
+                    if (nearestDanger) {
+                        this.direction = Math.atan2(this.y - nearestDanger.y, this.x - nearestDanger.x);
+                    } else if (nearestPrey) {
+                        this.direction = Math.atan2(nearestPrey.y - this.y, nearestPrey.x - this.x);
+                    } else if (nearestFood) {
+                        this.direction = Math.atan2(nearestFood.y - this.y, nearestFood.x - this.x);
+                    }
+                }
+            }
+
+            eat() {
+                for (let i = 0; i < foodItems.length; i++) {
+                    const food = foodItems[i];
+                    if (Math.hypot(this.x - food.x, this.y - food.y) < this.size + food.size) {
+                        const absorptionAmount = Math.min(CONFIG.absorptionRate, food.energy);
+                        this.energy = Math.min(this.energy + absorptionAmount, this.maxEnergy);
+                        this.size = Math.sqrt(this.energy) * CONFIG.sizeEnergyMultiplier;
+                        food.energy -= absorptionAmount;
+                        food.size = Math.sqrt(food.energy);
+                        if (food.energy <= CONFIG.minFoodSize) {
+                            despawnFood(i);
+                        }
+                        break;
+                    }
+                }
+            }
+
+            absorb() {
+                for (let i = 0; i < creatures.length; i++) {
+                    const creature = creatures[i];
+                    if (creature !== this && Math.hypot(this.x - creature.x, this.y - creature.y) < this.size + creature.size && creature.size < this.size && colorDifference(this.color, creature.color) > CONFIG.colorDifferenceThreshold && creature.parent !== kingCreature) {
+                        const absorptionAmount = Math.min(CONFIG.absorptionRate, creature.energy);
+                        this.energy = Math.min(this.energy + absorptionAmount, this.maxEnergy);
+                        this.size = Math.sqrt(this.energy) * CONFIG.sizeEnergyMultiplier;
+                        creature.energy -= absorptionAmount;
+                        creature.size = Math.sqrt(creature.energy) * CONFIG.sizeEnergyMultiplier;
+                        
+                        // If the creature being absorbed is the King and its energy drops below 25%, transfer the King buff
+                        if (kingCreature === creature && creature.energy / creature.maxEnergy < 0.25) {
+                            kingCreature = this;
+                        }
+
+                        if (creature.energy <= CONFIG.minFoodSize) {
+                            if (kingCreature === creature) {
+                                kingCreature = this; // Transfer King buff to the creature who killed the King
+                            }
+                            despawnCreature(i);
+                        }
+
+                        // Force reproduction when absorbing with max energy/size
+                        if (this.energy === this.maxEnergy) {
+                            this.reproduce();
+                        }
+                        break;
+                    }
+                }
+
+                // Check if there is no King and assign the current creature as King
+                if (!kingCreature) {
+                    kingCreature = this;
+                }
+            }
+
+            reproduce() {
+                if (this.energy > this.reproductionThreshold) {
+                    if (creatures.length >= CONFIG.maxCreatures) {
+                        let smallestCreatureIndex = -1;
+                        let smallestCreatureSize = Infinity;
+
+                        for (let i = 0; i < creatures.length; i++) {
+                            if (creatures[i].size < smallestCreatureSize) {
+                                smallestCreatureSize = creatures[i].size;
+                                smallestCreatureIndex = i;
+                            }
+                        }
+
+                        if (smallestCreatureIndex !== -1) {
+                            despawnCreature(smallestCreatureIndex);
+                        }
+                    }
+
+                    const offspringEnergy = this.energy * CONFIG.offspringEnergyFraction;
+                    this.energy *= (1 - CONFIG.offspringEnergyFraction);
+                    this.size = Math.sqrt(this.energy) * CONFIG.sizeEnergyMultiplier;
+
+                    const offspringTraits = {
+                        energy: offspringEnergy,
+                        maxSpeed: mutateValue(this.maxSpeed, CONFIG.baseMutationRate / 10),
+                        maxAcceleration: mutateValue(this.maxAcceleration, CONFIG.baseMutationRate),
+                        visionRange: mutateValue(this.visionRange, CONFIG.baseMutationRate),
+                        maxEnergy: mutateValue(this.maxEnergy, CONFIG.baseMutationRate * 2),
+                        color: mutateColor(this.color),
+                        aiLevel: this.mutateAILevel(this.aiLevel, CONFIG.baseMutationRate),
+                        energyLossRate: mutateValue(this.energyLossRate, CONFIG.baseMutationRate / 20)
+                    };
+
+                    const offspring = new Creature(this.x, this.y, offspringTraits, this);
+                    creatures.push(offspring);
+                    updateCounters();
+                }
+            }
+
+            mutateAILevel() {
+                let newAILevel = this.aiLevel;
+                const mutationChance = Math.random();
+                
+                // Increase AI level with a small chance
+                if (mutationChance < 0.05 && newAILevel < CONFIG.maxAILevel) {
+                    newAILevel++;
+                }
+                // Decrease AI level with a small chance
+                else if (mutationChance > 0.95 && newAILevel > 1) {
+                    newAILevel--;
+                }
+                return newAILevel;
+            }
+
+            shiftColor() {
+                const hue = getColorHue(this.color);
+                const newHue = (hue + 1) % 360;
+                this.color = `hsl(${newHue}, 100%, 50%)`;
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, 2 * Math.PI);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                if (this === kingCreature) {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size + 4, 0, 2 * Math.PI);
+                    ctx.strokeStyle = 'yellow';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size + 8, 0, 2 * Math.PI);
+                    ctx.strokeStyle = 'yellow';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+
+                if (this === lastClickedCreature) {
+                    ctx.fillStyle = '#FFD700';
+                    ctx.font = `${this.size * 2}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('*', this.x, this.y);
+                }
+            }
+
+            handleInteractionStart(x, y) {
+                const currentTime = new Date().getTime();
+                if (currentTime - this.lastClickTime < 300) {
+                    this.handleDoubleClick(x, y);
+                }
+                this.lastClickTime = currentTime;
+
+                if (Math.hypot(x - this.x, y - this.y) < this.size) {
+                    this.dragging = true;
+                    this.dragStartX = x - this.x;
+                    this.dragStartY = y - this.y;
+                    lastClickedCreature = this;
+                    updateCreatureStats();
+                }
+            }
+
+            handleInteractionMove(x, y) {
+                if (this.dragging) {
+                    this.x = x - this.dragStartX;
+                    this.y = y - this.dragStartY;
+                }
+            }
+
+            handleInteractionEnd() {
+                this.dragging = false;
+            }
+
+            handleDoubleClick(x, y) {
+                if (Math.hypot(x - this.x, y - this.y) < this.size) {
+                    if (this === kingCreature) {
+                        randomizeAllCreatureColors();
+                    } else {
+                        this.color = randomColor();
+                    }
+                }
+            }
+        }
+
+        // Spawning functions
+        function spawnCreature(x, y, traits = {}) {
+            const newCreature = new Creature(x, y, traits);
+            creatures.push(newCreature);
+            updateCounters();
+        }
+
+        function spawnFood(x, y, energy = CONFIG.foodEnergy) {
+            const newFood = new Food(x, y, energy);
+            foodItems.push(newFood);
+            updateCounters();
+        }
+
+        function despawnCreature(index) {
+            creatures.splice(index, 1);
+            updateCounters();
+        }
+
+        function despawnFood(index) {
+            foodItems.splice(index, 1);
+            updateCounters();
+        }
+
+        // Initial spawn
+        function initialSpawn() {
+            for (let i = 0; i < CONFIG.initialCreatures; i++) {
+                spawnCreature(Math.random() * canvas.width, Math.random() * canvas.height);
+            }
+            for (let i = 0; i < CONFIG.initialFoodItems; i++) {
+                spawnFood(Math.random() * canvas.width, Math.random() * canvas.height);
+            }
+            updateCounters();
+        }
+
+        initialSpawn();
+
+        // Main loop variables
+        let lastFrameTime = performance.now(), frameCount = 0, fps = 0;
+
+        function updateFPS() {
+            const now = performance.now();
+            if (now - lastFrameTime >= 1000) {
+                fps = frameCount;
+                frameCount = 0;
+                lastFrameTime = now;
+            }
+            frameCount++;
+        }
+
+        function enforceMinMaxCounts() {
+            if (creatures.length < CONFIG.minCreatures) {
+                for (let i = creatures.length; i < CONFIG.minCreatures; i++) {
+                    spawnCreature(Math.random() * canvas.width, Math.random() * canvas.height);
+                }
+            }
+
+            if (foodItems.length < CONFIG.minFoodItems) {
+                for (let i = foodItems.length; i < CONFIG.minFoodItems; i++) {
+                    spawnFood(Math.random() * canvas.width, Math.random() * canvas.height);
+                }
+            }
+        }
+
+        function adjustEnergyConsumptionRate() {
+            const error = creatures.length - CONST.targetCreatureCount;
+            CONFIG.energyConsumptionRate += error * CONST.adjustmentRate;
+
+            // Ensure energyConsumptionRate stays within reasonable bounds
+            CONFIG.energyConsumptionRate = Math.max(0.1, CONFIG.energyConsumptionRate);
+        }
+
+        // Calculate the average speed of all creatures
+        function calculateAverageSpeed() {
+            const totalSpeed = creatures.reduce((sum, creature) => sum + creature.maxSpeed, 0);
+            return totalSpeed / creatures.length;
+        }
+
+        // Adjust the speed of creatures to maintain desired average speed
+        function regulateCreatureSpeed() {
+            const averageSpeed = calculateAverageSpeed();
+            const speedAdjustmentFactor = CONFIG.desiredAverageSpeed / averageSpeed;
+
+            creatures.forEach(creature => {
+                creature.maxSpeed *= speedAdjustmentFactor;
+            });
+        }
+
+        function evolve() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const now = performance.now();
+            const deltaTime = (now - lastFrameTime) / 1000;
+            lastFrameTime = now;
+
+            // Update food
+            for (let i = foodItems.length - 1; i >= 0; i--) {
+                const food = foodItems[i];
+                if (food.isOutOfBounds()) {
+                    despawnFood(i);
+                } else {
+                    food.grow();
+                    food.draw();
+                }
+            }
+
+            // Update creatures
+            for (let i = creatures.length - 1; i >= 0; i--) {
+                const creature = creatures[i];
+                if (creature.alive) {
+                    creature.move(deltaTime);
+                    creature.eat();
+                    creature.absorb();
+                    creature.reproduce();
+                    creature.draw();
+                } else {
+                    if (kingCreature === creature) {
+                        kingCreature = null; // King has died, remove King buff
+                    }
+                    despawnCreature(i);
+                }
+            }
+
+            // Assign King buff to a random creature if no King exists
+            if (!kingCreature && creatures.length > 0) {
+                kingCreature = creatures[Math.floor(Math.random() * creatures.length)];
+            }
+
+            if (kingCreature) {
+                kingCreature.shiftColor();
+            }
+
+            // Spawn food periodically
+            if (foodItems.length < CONFIG.maxFoodItems && Date.now() - lastFoodSpawnTime > CONFIG.foodSpawnInterval) {
+                spawnFood(Math.random() * canvas.width, Math.random() * canvas.height);
+                lastFoodSpawnTime = Date.now();
+            }
+
+            enforceMinMaxCounts();
+            adjustEnergyConsumptionRate(); // Adjust energy consumption rate
+            regulateCreatureSpeed(); // Regulate creature speed
+            updateFPS();
+            updateCreatureStats(); // Update the creature stats display
+            fadeOverlayText(); // Handle fading of overlay text
+            requestAnimationFrame(evolve);
+        }
+
+        function fadeOverlayText() {
+            const now = Date.now();
+            const timeSinceLastClick = now - lastClickTime;
+
+            if (timeSinceLastClick > CONST.overlayFadeDelay) {
+                creatureCounter.style.opacity = 0;
+                foodCounter.style.opacity = 0;
+                creatureStats.style.opacity = 0;
+            }
+        }
+
+        // Check if a point is blank space
+        function isBlankSpace(x, y) {
+            for (const creature of creatures) {
+                if (Math.hypot(x - creature.x, y - creature.y) < creature.size) {
+                    return false;
+                }
+            }
+            for (const food of foodItems) {
+                if (Math.hypot(x - food.x, y - food.y) < food.size) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // Interaction handling
+        function handleInteraction(event, interactionType) {
+            const rect = canvas.getBoundingClientRect();
+            const x = (event.clientX || (event.touches ? event.touches[0].clientX : 0)) - rect.left;
+            const y = (event.clientY || (event.touches ? event.touches[0].clientY : 0)) - rect.top;
+
+            if (interactionType === 'Start' || interactionType === 'End') {
+                lastClickTime = Date.now(); // Update the last click time
+                creatureCounter.style.opacity = 1;
+                foodCounter.style.opacity = 1;
+                creatureStats.style.opacity = 1;
+            }
+
+            if (interactionType === 'Start') {
+                clickCount++;
+                if (clickCount === 1) {
+                    singleClickTimeout = setTimeout(() => {
+                        if (isBlankSpace(x, y) && foodItems.length < CONFIG.maxFoodItems) {
+                            currentSpawn = new Food(x, y, CONFIG.foodEnergy);
+                            currentSpawn.dragging = true;
+                            foodItems.push(currentSpawn);
+                            updateCounters();
+                        }
+                        clickCount = 0;
+                    }, 300);
+                } else if (clickCount === 2) {
+                    clearTimeout(singleClickTimeout);
+                    const clickedFood = foodItems.find(food => Math.hypot(x - food.x, y - food.y) < food.size);
+                    if (clickedFood) {
+                        if (clickedFood.handleDoubleClick(x, y)) {
+                            const foodIndex = foodItems.indexOf(clickedFood);
+                            foodItems.splice(foodIndex, 1);
+                            updateCounters();
+                        }
+                    }
+                    clickCount = 0;
+                }
+            } else if (interactionType === 'Move' && currentSpawn) {
+                currentSpawn.handleInteractionMove(x, y);
+            } else if (interactionType === 'End' && currentSpawn) {
+                currentSpawn.handleInteractionEnd();
+                currentSpawn = null;
+            }
+
+            creatures.forEach(creature => creature[`handleInteraction${interactionType}`]?.(x, y));
+            foodItems.forEach(food => food[`handleInteraction${interactionType}`]?.(x, y));
+        }
+
+        // Function to randomize colors of all creatures
+        function randomizeAllCreatureColors() {
+            creatures.forEach(creature => {
+                creature.color = randomColor();
+            });
+        }
+
+        // Event listeners for interactions
+        canvas.addEventListener('mousedown', e => handleInteraction(e, 'Start'));
+        canvas.addEventListener('mousemove', e => handleInteraction(e, 'Move'));
+        canvas.addEventListener('mouseup', e => handleInteraction(e, 'End'));
+        canvas.addEventListener('touchstart', e => handleInteraction(e, 'Start'));
+        canvas.addEventListener('touchmove', e => handleInteraction(e, 'Move'));
+        canvas.addEventListener('touchend', e => handleInteraction(e, 'End'));
+
+        // Start the main loop
+        evolve();
+    </script>
+</body>
+</html>
