@@ -65,7 +65,7 @@
             maxEnergy: 2000,
             baseMutationRate: 0.1,
             colorDifferenceThreshold: 36,
-            foodGrowthRate: 0.2,
+            foodGrowthRate: 0.1,
             offspringEnergyFraction: 0.25,
             absorptionRate: 5,
             maxAILevel: 5,
@@ -530,13 +530,17 @@
         }
 
         // Spawning functions
-        function spawnCreature(x, y, traits = {}) {
-            const newCreature = new Creature(x, y, traits);
+        function spawnCreature(x, y, traits = {}, parent = null) {
+            if (!parent) { // Genesis creature
+                traits.maxEnergy = Math.random() * CONFIG.maxEnergy;
+                traits.energy = traits.maxEnergy * 0.1; // 10% of max energy
+            }
+            const newCreature = new Creature(x, y, traits, parent);
             creatures.push(newCreature);
             updateCounters();
         }
 
-        function spawnFood(x, y, energy = CONFIG.foodEnergy) {
+        function spawnFood(x, y, energy = CONFIG.foodEnergy * 0.1) { // Spawn with 10% of food energy
             const newFood = new Food(x, y, energy);
             foodItems.push(newFood);
             updateCounters();
@@ -719,7 +723,7 @@
                 if (clickCount === 1) {
                     singleClickTimeout = setTimeout(() => {
                         if (isBlankSpace(x, y) && foodItems.length < CONFIG.maxFoodItems) {
-                            currentSpawn = new Food(x, y, CONFIG.foodEnergy);
+                            currentSpawn = new Food(x, y, CONFIG.foodEnergy * 0.1); // Spawn with 10% of food energy
                             currentSpawn.dragging = true;
                             foodItems.push(currentSpawn);
                             updateCounters();
