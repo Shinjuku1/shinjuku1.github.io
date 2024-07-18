@@ -1,43 +1,77 @@
-<!doctype html>
-
-<html>
-    <head>
-        <meta charset="utf-8">
-
-        <title>HomeBrew Games</title>
-
-        <!-- Load external CSS styles -->
-        <link rel="stylesheet" href="https://shinjuku1.github.io/styles-index.css">
-
-    </head>
-
-    <body>
-
-        <h1>HomeBrew Games v4</h1>
-
-        <ul>
-            <!-- List of Clickable Game Images -->
-            <li>
-                <a href="https://shinjuku1.github.io/FlappyCube.html">
-                    <img src="https://shinjuku1.github.io/FlappyCube.jpg" alt="Flappy Cube" style="width: 100px; height: 100px;">
-                </a>
-            </li>
-            <li>
-                <a href="https://shinjuku1.github.io/Snake.html">
-                    <img src="https://shinjuku1.github.io/Snake.jpg" alt="Snake" style="width: 100px; height: 100px;">
-                </a>
-            </li>
-            <li>
-                <a href="https://shinjuku1.github.io/KickUps.html">
-                    <img src="https://shinjuku1.github.io/KickUps.jpg" alt="Kick Ups" style="width: 100px; height: 100px;">
-                </a>
-            </li>
-            <li>
-                <a href="https://shinjuku1.github.io/GoldMiner.html">
-                    <img src="https://shinjuku1.github.io/GoldMiner.jpg" alt="GoldMiner" style="width: 100px; height: 100px;">
-                </a>
-            </li>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Selection</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Edu+AU+VIC+WA+NT+Hand:wght@400..700&display=swap');
+        body {
+            background-color: #1a1a1a;
+            color: #f0f0f0;
+            font-family: "Edu AU VIC WA NT Hand", cursive;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        .background-iframe {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            z-index: -1;
+        }
+        .container {
+            text-align: center;
+            max-width: 800px;
+            width: 90%;
+            padding: 20px;
+            background-color: rgba(51, 51, 51, 0.8);
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            z-index: 1;
+        }
+        h1 {
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            color: #ffffff;
+        }
+        .game-list {
+            list-style: none;
+            padding: 0;
+        }
+        .game-list li {
+            margin: 10px 0;
+        }
+        .game-list a {
+            text-decoration: none;
+            color: #ffffff;
+            font-size: 1.2em;
+            transition: color 0.3s ease;
+        }
+        .game-list a:hover {
+            color: #ff0000;
+        }
+    </style>
+</head>
+<body>
+    <iframe src="https://shinjuku1.github.io/EvoSim" class="background-iframe"></iframe>
+    <div class="container">
+        <h1>Select a Game</h1>
+        <ul class="game-list">
+            <li><a href="https://shinjuku1.github.io/EvoSimNeural" target="_blank">EvoSim Neural</a></li>
+            <li><a href="https://shinjuku1.github.io/EvoSim" target="_blank">EvoSim</a></li>
+            <li><a href="https://shinjuku1.github.io/Shooter2" target="_blank">Shooter 2</a></li>
+            <li><a href="https://shinjuku1.github.io/FlappyCube" target="_blank">Flappy Cube</a></li>
+            <li><a href="https://shinjuku1.github.io/Snake" target="_blank">Snake</a></li>
+            <li><a href="https://shinjuku1.github.io/KickUps" target="_blank">Kick Ups</a></li>
+            <li><a href="https://shinjuku1.github.io/GoldMiner" target="_blank">Gold Miner</a></li>
         </ul>
-
-     </body>
+    </div>
+</body>
 </html>
