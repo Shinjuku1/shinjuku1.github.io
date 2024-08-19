@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Scanner with Capture</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+        }
+
+        #video {
+            width: 100%;
+            max-width: 400px;
+            height: auto;
+            margin: 20px auto;
+            border: 1px solid #ddd;
+        }
+
+        canvas {
+            display: none;
+        }
+
+        #controls {
+            margin-top: 10px;
+        }
+
+        #result {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            display: inline-block;
+            width: 80%;
+            word-wrap: break-word;
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #capture-button {
+            background-color: #e53935;
+        }
+
+        #capture-button:hover {
+            background-color: #d32f2f;
+        }
+
+        #stop-button {
+            background-color: #FF5722;
+        }
+
+        #stop-button:hover {
+            background-color: #E64A19;
+        }
+    </style>
+</head>
+<body>
+    <h1>QR Code Scanner with Capture</h1>
+
+    <!-- Live Camera Video Feed -->
+    <video id="video" autoplay></video>
+    <canvas id="canvas"></canvas>
+
+    <!-- Controls -->
+    <div id="controls">
+        <button id="start-button">Start Scanning</button>
+        <button id="stop-button">Stop Scanning</button>
+        <button id="capture-button" disabled>Capture QR Code</button>
+    </div>
+
+    <!-- Scan Result -->
+    <div id="result">Waiting for QR code...</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
+
+    <script>
+        let video = document.getElementById("video");
+        let canvas = document.getElementById("canvas");
+        let context = canvas.getContext("2d");
+        let scanInterval;
+        let stream;
+        let qrCodeData = null;
+
+        // Start scanning function
+        document.getElementById("start-button").addEventListener("click", function() {
+            startCamera();
+        });
+
+        // Stop scanning function
+        document.getElementById("stop-button").addEventListener("click", function() {
+            stopCamera();
+        });
+
+        // Capture QR code frame
+        document.getElementById("capture-button").addEventListener("click", function() {
+            captureQRCodeFrame();
+        });
+
+        // Start camera and QR code scanning
+        function startCamera() {
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+            .then(function(mediaStream) {
+                stream = mediaStream;
+                video.srcObject = stream;
+                video.play();
+
+                // Set up scanning interval
+                scanInterval = setInterval(scanQRCode, 300);
+            })
+            .catch(function(err) {
+                console.error("Camera access error: " + err);
+                document.getElementById("result").textContent = "Error accessing the camera.";
+            });
+        }
+
+        // Stop camera and clear scanning
+        function stopCamera() {
+            clearInterval(scanInterval);
+            if (stream) {
+                let tracks = stream.getTracks();
+                tracks.forEach(track => track.stop());
+            }
+            video.pause();
+            qrCodeData = null;
+            document.getElementById("capture-button").disabled = true;
+        }
+
+        // Scan QR code from the video feed
+        function scanQRCode() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            let qrCode = jsQR(imageData.data, canvas.width, canvas.height);
+
+            if (qrCode) {
+                drawBoundingBox(qrCode.location); // Highlight QR code
+                qrCodeData = qrCode.data;
+                document.getElementById("result").textContent = "QR Code Data: " + qrCode.data;
+                document.getElementById("capture-button").disabled = false;
+            }
+        }
+
+        // Draw bounding box around QR code
+        function drawBoundingBox(location) {
+            context.lineWidth = 4;
+            context.strokeStyle = "#FF3B58";
+
+            // Draw bounding box
+            context.beginPath();
+            context.moveTo(location.topLeftCorner.x, location.topLeftCorner.y);
+            context.lineTo(location.topRightCorner.x, location.topRightCorner.y);
+            context.lineTo(location.bottomRightCorner.x, location.bottomRightCorner.y);
+            context.lineTo(location.bottomLeftCorner.x, location.bottomLeftCorner.y);
+            context.closePath();
+            context.stroke();
+        }
+
+        // Capture and download the QR code frame
+        function captureQRCodeFrame() {
+            if (qrCodeData) {
+                let link = document.createElement('a');
+                link.href = canvas.toDataURL('image/png');
+                link.download = 'qr-code-frame.png';
+                link.click();
+            }
+        }
+    </script>
+</body>
+</html>
