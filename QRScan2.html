@@ -177,7 +177,7 @@
                 video.play();
 
                 // Set up scanning interval
-                scanInterval = setInterval(scanQRCode, 300);
+                scanInterval = setInterval(scanQRCode, 60);
             })
             .catch(function(err) {
                 console.error("Camera access error: " + err);
@@ -215,7 +215,7 @@
             if (qrCode) {
                 qrCodeData = qrCode.data;
                 qrCodeLocation = qrCode.location;
-                document.getElementById("result").textContent = "QR Code Data: " + qrCode.data;
+                document.getElementById("result").textContent = qrCode.data;
                 document.getElementById("capture-button").disabled = false;
             }
         }
