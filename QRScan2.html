@@ -205,10 +205,12 @@
         function scanQRCode() {
             if (isCaptureMode) return; // Don't scan if in capture mode
 
+            // Draw the video frame into the canvas for analysis
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-            context.clearRect(0, 0, canvas.width, canvas.height); // Clear previous frame
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+            // Get the image data from the canvas
             let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
             let qrCode = jsQR(imageData.data, canvas.width, canvas.height);
 
@@ -235,7 +237,6 @@
 
         // Draw bounding box around QR code
         function drawBoundingBox(location) {
-            context.clearRect(0, 0, canvas.width, canvas.height); // Clear the overlay
             context.lineWidth = 4;
             context.strokeStyle = "#FF3B58";
 
