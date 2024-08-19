@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Code Scanner with Capture</title>
+    <title>QR Code Scanner with Enhanced UI</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -11,22 +11,39 @@
             background-color: #f4f4f9;
             margin: 0;
             padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .scanner-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin-top: 20px;
         }
 
         #video {
             width: 100%;
-            max-width: 400px;
-            height: auto;
-            margin: 20px auto;
             border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: black;
         }
 
-        #canvas {
-            display: none;
+        #overlay-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
         }
 
         #controls {
-            margin-top: 10px;
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
         }
 
         #result {
@@ -34,19 +51,19 @@
             padding: 10px;
             background-color: #f0f0f0;
             border: 1px solid #ccc;
-            display: inline-block;
+            border-radius: 8px;
             width: 80%;
             word-wrap: break-word;
         }
 
         button {
-            margin-top: 10px;
             padding: 10px 20px;
             background-color: #4CAF50;
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
+            transition: background-color 0.3s ease;
         }
 
         button:hover {
@@ -76,14 +93,27 @@
         #download-button:hover {
             background-color: #1976D2;
         }
+
+        #capture-button, #download-button {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        #capture-button:enabled, #download-button:enabled {
+            opacity: 1;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
-    <h1>QR Code Scanner with Capture</h1>
 
-    <!-- Live Camera Video Feed -->
-    <video id="video" autoplay></video>
-    <canvas id="canvas"></canvas>
+    <h1>QR Code Scanner</h1>
+
+    <!-- Scanner Container with Video and Canvas Overlay -->
+    <div class="scanner-container">
+        <video id="video" autoplay></video>
+        <canvas id="overlay-canvas"></canvas>
+    </div>
 
     <!-- Controls -->
     <div id="controls">
@@ -100,7 +130,7 @@
 
     <script>
         let video = document.getElementById("video");
-        let canvas = document.getElementById("canvas");
+        let canvas = document.getElementById("overlay-canvas");
         let context = canvas.getContext("2d");
         let scanInterval;
         let stream;
@@ -155,6 +185,8 @@
             video.pause();
             qrCodeData = null;
             document.getElementById("capture-button").disabled = true;
+            document.getElementById("download-button").disabled = true;
+            context.clearRect(0, 0, canvas.width, canvas.height); // Clear the overlay
         }
 
         // Scan QR code from the video feed
@@ -163,6 +195,8 @@
 
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
+
+            context.clearRect(0, 0, canvas.width, canvas.height); // Clear previous frame
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
             let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
@@ -177,7 +211,7 @@
             }
         }
 
-        // Draw bounding box around QR code in real-time
+        // Draw bounding box around QR code in real-time on overlay canvas
         function drawBoundingBox(location) {
             context.lineWidth = 4;
             context.strokeStyle = "#FF3B58";
