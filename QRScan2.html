@@ -21,7 +21,7 @@
             border: 1px solid #ddd;
         }
 
-        canvas {
+        #canvas {
             display: none;
         }
 
@@ -68,6 +68,14 @@
         #stop-button:hover {
             background-color: #E64A19;
         }
+
+        #download-button {
+            background-color: #2196F3;
+        }
+
+        #download-button:hover {
+            background-color: #1976D2;
+        }
     </style>
 </head>
 <body>
@@ -82,6 +90,7 @@
         <button id="start-button">Start Scanning</button>
         <button id="stop-button">Stop Scanning</button>
         <button id="capture-button" disabled>Capture QR Code</button>
+        <button id="download-button" disabled>Download Image</button>
     </div>
 
     <!-- Scan Result -->
@@ -96,6 +105,8 @@
         let scanInterval;
         let stream;
         let qrCodeData = null;
+        let qrCodeLocation = null;
+        let isCaptureMode = false;
 
         // Start scanning function
         document.getElementById("start-button").addEventListener("click", function() {
@@ -107,9 +118,14 @@
             stopCamera();
         });
 
-        // Capture QR code frame
+        // Capture QR code frame (freeze the video)
         document.getElementById("capture-button").addEventListener("click", function() {
             captureQRCodeFrame();
+        });
+
+        // Download captured QR code image
+        document.getElementById("download-button").addEventListener("click", function() {
+            downloadCapturedImage();
         });
 
         // Start camera and QR code scanning
@@ -143,6 +159,8 @@
 
         // Scan QR code from the video feed
         function scanQRCode() {
+            if (isCaptureMode) return; // Don't scan if in capture mode
+
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -153,12 +171,13 @@
             if (qrCode) {
                 drawBoundingBox(qrCode.location); // Highlight QR code
                 qrCodeData = qrCode.data;
+                qrCodeLocation = qrCode.location;
                 document.getElementById("result").textContent = "QR Code Data: " + qrCode.data;
                 document.getElementById("capture-button").disabled = false;
             }
         }
 
-        // Draw bounding box around QR code
+        // Draw bounding box around QR code in real-time
         function drawBoundingBox(location) {
             context.lineWidth = 4;
             context.strokeStyle = "#FF3B58";
@@ -173,14 +192,23 @@
             context.stroke();
         }
 
-        // Capture and download the QR code frame
+        // Capture and freeze the frame showing the QR code
         function captureQRCodeFrame() {
             if (qrCodeData) {
-                let link = document.createElement('a');
-                link.href = canvas.toDataURL('image/png');
-                link.download = 'qr-code-frame.png';
-                link.click();
+                isCaptureMode = true; // Stop real-time scanning
+                clearInterval(scanInterval); // Stop further scanning
+                video.pause(); // Freeze the video feed
+
+                document.getElementById("download-button").disabled = false; // Enable download button
             }
+        }
+
+        // Download the captured image
+        function downloadCapturedImage() {
+            let link = document.createElement('a');
+            link.href = canvas.toDataURL('image/png');
+            link.download = 'qr-code-capture.png';
+            link.click();
         }
     </script>
 </body>
