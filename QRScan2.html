@@ -7,27 +7,28 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            text-align: center;
             background-color: #f4f4f9;
             margin: 0;
             padding: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
+            height: 100vh;
         }
 
         .scanner-container {
             position: relative;
             width: 100%;
             max-width: 400px;
-            margin-top: 20px;
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: #000;
         }
 
         #video {
             width: 100%;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background-color: black;
+            height: auto;
         }
 
         #overlay-canvas {
@@ -39,21 +40,12 @@
             pointer-events: none;
         }
 
-        #controls {
-            margin-top: 20px;
+        #button-overlay {
+            position: fixed;
+            bottom: 20px;
             display: flex;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        #result {
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #f0f0f0;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            width: 80%;
-            word-wrap: break-word;
+            gap: 15px;
+            z-index: 10;
         }
 
         button {
@@ -64,6 +56,7 @@
             border-radius: 5px;
             cursor: pointer;
             transition: background-color 0.3s ease;
+            font-size: 16px;
         }
 
         button:hover {
@@ -103,6 +96,21 @@
             opacity: 1;
             cursor: pointer;
         }
+
+        #result {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            width: 80%;
+            word-wrap: break-word;
+            text-align: center;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -115,8 +123,8 @@
         <canvas id="overlay-canvas"></canvas>
     </div>
 
-    <!-- Controls -->
-    <div id="controls">
+    <!-- Controls Overlay -->
+    <div id="button-overlay">
         <button id="start-button">Start Scanning</button>
         <button id="stop-button">Stop Scanning</button>
         <button id="capture-button" disabled>Capture QR Code</button>
@@ -196,14 +204,10 @@
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
 
-            context.clearRect(0, 0, canvas.width, canvas.height); // Clear previous frame
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
             let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
             let qrCode = jsQR(imageData.data, canvas.width, canvas.height);
 
             if (qrCode) {
-                drawBoundingBox(qrCode.location); // Highlight QR code
                 qrCodeData = qrCode.data;
                 qrCodeLocation = qrCode.location;
                 document.getElementById("result").textContent = "QR Code Data: " + qrCode.data;
@@ -211,8 +215,22 @@
             }
         }
 
-        // Draw bounding box around QR code in real-time on overlay canvas
+        // Capture and freeze the frame showing the QR code
+        function captureQRCodeFrame() {
+            if (qrCodeData) {
+                isCaptureMode = true; // Stop real-time scanning
+                clearInterval(scanInterval); // Stop further scanning
+                video.pause(); // Freeze the video feed
+
+                // Draw bounding box on capture
+                drawBoundingBox(qrCodeLocation);
+                document.getElementById("download-button").disabled = false; // Enable download button
+            }
+        }
+
+        // Draw bounding box around QR code
         function drawBoundingBox(location) {
+            context.clearRect(0, 0, canvas.width, canvas.height); // Clear the overlay
             context.lineWidth = 4;
             context.strokeStyle = "#FF3B58";
 
@@ -224,17 +242,6 @@
             context.lineTo(location.bottomLeftCorner.x, location.bottomLeftCorner.y);
             context.closePath();
             context.stroke();
-        }
-
-        // Capture and freeze the frame showing the QR code
-        function captureQRCodeFrame() {
-            if (qrCodeData) {
-                isCaptureMode = true; // Stop real-time scanning
-                clearInterval(scanInterval); // Stop further scanning
-                video.pause(); // Freeze the video feed
-
-                document.getElementById("download-button").disabled = false; // Enable download button
-            }
         }
 
         // Download the captured image
