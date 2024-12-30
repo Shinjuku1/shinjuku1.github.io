@@ -20,38 +20,40 @@
         }
         .counter { 
             position: absolute; 
-            top: 10px; 
+            top: 1vh; 
             color: white; 
             font-family: Arial, sans-serif; 
-            font-size: 12px; 
+            font-size: 1.5vh; 
             user-select: none; 
             pointer-events: none; /* Allow clicks to pass through */
             transition: opacity 0.5s; /* Smooth fade transition */
         }
         #creatureCounter {
-            right: 10px;
+            right: 1vh;
         }
         #foodCounter {
-            right: 10px;
-            top: 30px;
+            right: 1vh;
+            top: 3vh;
         }
         #creatureStats {
-            left: 10px;
-            top: 10px;
+            left: 1vh;
+            top: 1vh;
             white-space: pre-wrap;
+            font-size: 1.2vh;
         }
         #optionsMenu {
             position: absolute;
-            bottom: 70px;
-            right: 20px;
-            width: 400px;
+            bottom: 2vh;
+            right: 2vh;
+            width: calc(100vw - 4vh); /* Width adjusts to height but uses vw for width */
+            max-width: 600px; /* Ensure readability on larger screens */
             background-color: rgba(0, 0, 0, 0.9);
             border: 1px solid #fff;
             border-radius: 10px;
-            padding: 10px;
+            padding: 1vh;
             display: none;
             flex-direction: column;
-            gap: 10px;
+            gap: 0.5vh;
             z-index: 1000;
         }
 
@@ -61,8 +63,8 @@
             align-items: center;
             color: white;
             font-family: Arial, sans-serif; 
-            font-size: 12px;
-            margin-bottom: 10px;
+            font-size: 1.2vh;
+            margin-bottom: 0.5vh;
         }
 
         .option label {
@@ -72,25 +74,25 @@
 
         .option input[type="range"],
         .option input[type="number"] {
-            margin-left: 10px;
-            margin-right: 10px;
+            margin-left: 0.5vh;
+            margin-right: 0.5vh;
             border-radius: 5px;
         }
 
         .option input[type="number"] {
-            width: 60px;
+            width: 6vh;
             background: transparent;
             border: 1px solid #fff;
             color: white;
             font-family: Arial, sans-serif;
-            font-size: 12px;
+            font-size: 1.2vh;
             text-align: center;
         }
 
         .slider-label {
             color: white;
             font-family: Arial, sans-serif;
-            font-size: 12px;
+            font-size: 1.2vh;
             user-select: none;
         }
 
@@ -100,10 +102,10 @@
 
         #gearIcon {
             position: absolute;
-            bottom: 20px;
-            right: 20px;
+            bottom: 1vh;
+            right: 1vh;
             cursor: pointer;
-            font-size: 24px;
+            font-size: 3vh;
             color: white;
             z-index: 1000;
         }
@@ -111,17 +113,18 @@
         .tabs {
             display: flex;
             cursor: pointer;
-            margin-bottom: 10px;
+            margin-bottom: 0.5vh;
         }
 
         .tab {
             flex: 1;
-            padding: 10px;
+            padding: 0.5vh;
             text-align: center;
             background: #333;
             color: white;
             border: 1px solid #fff;
             border-radius: 5px;
+            font-size: 1.2vh;
         }
 
         .tab.active {
@@ -140,7 +143,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 0.5vh;
         }
 
         .save-slot input {
@@ -149,7 +152,7 @@
             border: 1px solid #fff;
             color: white;
             font-family: Arial, sans-serif;
-            font-size: 12px;
+            font-size: 1.2vh;
             text-align: center;
             border-radius: 5px;
         }
@@ -161,9 +164,35 @@
             border: 1px solid #fff;
             color: white;
             font-family: Arial, sans-serif;
-            font-size: 12px;
+            font-size: 1.2vh;
             cursor: pointer;
             border-radius: 5px;
+        }
+
+        /* Media query for smaller screens */
+        @media screen and (max-height: 400px) {
+            #optionsMenu {
+                bottom: 1vh;
+                right: 1vh;
+                width: calc(100vw - 2vh);
+                max-width: none;
+                padding: 0.5vh;
+            }
+            .option, .save-slot, .reset-button {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .option input[type="number"], .save-slot input {
+                width: 100%;
+                margin-top: 0.5vh;
+            }
+            .save-slot button {
+                width: 100%;
+                margin-top: 0.5vh;
+            }
+            .reset-button {
+                width: 100%;
+            }
         }
     </style>
 </head>
