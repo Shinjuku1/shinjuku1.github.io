@@ -300,16 +300,6 @@
                 <input type="range" id="targetCreatureCount" min="0" max="1000" step="10" value="250">
                 <input type="number" id="targetCreatureCountNumber" min="0" max="1000" step="10" value="250">
             </div>
-            <div class="option">
-                <label for="adjustmentRate" class="slider-label">Adjustment Rate</label>
-                <input type="range" id="adjustmentRate" min="0" max="1" step="0.01" value="0.1">
-                <input type="number" id="adjustmentRateNumber" min="0" max="1" step="0.01" value="0.1">
-            </div>
-            <div class="option">
-                <label for="overlayFadeDelay" class="slider-label">Overlay Fade Delay (ms)</label>
-                <input type="range" id="overlayFadeDelay" min="0" max="30000" step="1000" value="10000">
-                <input type="number" id="overlayFadeDelayNumber" min="0" max="30000" step="1000" value="10000">
-            </div>
         </div>
         <div id="save" class="tab-content">
             <div class="save-slot">
@@ -437,8 +427,6 @@
             { slider: 'desiredAverageSpeed', number: 'desiredAverageSpeedNumber' },
             { slider: 'baseEnergyLossRate', number: 'baseEnergyLossRateNumber' },
             { slider: 'targetCreatureCount', number: 'targetCreatureCountNumber' },
-            { slider: 'adjustmentRate', number: 'adjustmentRateNumber' },
-            { slider: 'overlayFadeDelay', number: 'overlayFadeDelayNumber' }
         ];
 
         let creatures = [];
@@ -644,12 +632,13 @@
                 this.maxSpeed = traits.maxSpeed || CONFIG.maxSpeed * CONFIG.speedEnergyMultiplier / this.size;
                 this.acceleration = 0;
                 this.maxAcceleration = traits.maxAcceleration || CONFIG.maxAcceleration;
+                this.deceleration = this.maxAcceleration / 2;  // Assuming deceleration is half of acceleration
                 this.energyLossRate = traits.energyLossRate || CONFIG.baseEnergyLossRate;
 
                 this.visionRange = this.calculateVisionRange();
                 this.aiLevel = traits.aiLevel || 1;
 
-                this.brain = traits.brain ? new NeuralNetwork(traits.brain.layerSizes) : new NeuralNetwork([4, 6, 2]);
+                this.brain = traits.brain ? new NeuralNetwork(traits.brain.layerSizes) : new NeuralNetwork([6, 8, 3]); // 6 inputs, 3 outputs
                 if (traits.brain) {
                     this.brain.weights = traits.brain.weights;
                     this.brain.biases = traits.brain.biases;
@@ -674,16 +663,19 @@
                     const previousDirection = this.direction;
                     this.seekFoodOrAvoidDanger();
                     const angleChange = Math.abs(this.direction - previousDirection);
+
                     const turnFactor = Math.max(0.1, 1 - angleChange / Math.PI);
 
-                    const targetSpeed = this.maxSpeed * turnFactor;
-                    if (this.speed < targetSpeed) {
-                        this.acceleration = Math.min(this.maxAcceleration, targetSpeed - this.speed);
+                    let targetSpeed = this.maxSpeed * turnFactor;
+                    
+                    // Adjust speed based on whether we're seeking food or escaping
+                    if (this.seekingFood) {
+                        targetSpeed = Math.min(this.maxSpeed, this.speed + this.acceleration * deltaTime);
                     } else {
-                        this.acceleration = Math.max(-this.maxAcceleration, targetSpeed - this.speed);
+                        targetSpeed = Math.max(0, this.speed - this.deceleration * deltaTime);
                     }
-                    this.speed += this.acceleration * deltaTime;
-                    this.speed = Math.max(0, Math.min(this.maxSpeed, this.speed));
+
+                    this.speed = Math.max(0, Math.min(this.maxSpeed, targetSpeed));
 
                     const moveStep = this.speed * deltaTime * speedScale;
                     this.x += Math.cos(this.direction) * moveStep;
@@ -694,6 +686,9 @@
 
                     this.wrapAroundCanvas();
                     this.size = Math.sqrt(this.energy) * CONFIG.sizeEnergyMultiplier * parseFloat(creatureSizeSlider.value);
+                    
+                    // Prevent overlapping by more than 25%
+                    this.preventOverlap();
                 }
             }
 
@@ -706,13 +701,8 @@
 
             seekFoodOrAvoidDanger() {
                 this.visionRange = this.calculateVisionRange();
-
-                let nearestFood = null;
-                let nearestFoodDistance = Infinity;
-                let nearestDanger = null;
-                let nearestDangerDistance = Infinity;
-                let nearestPrey = null;
-                let nearestPreyDistance = Infinity;
+                let nearestFood = null, nearestDanger = null, nearestPrey = null;
+                let nearestFoodDistance = Infinity, nearestDangerDistance = Infinity, nearestPreyDistance = Infinity;
 
                 for (const food of foodItems) {
                     const distance = this.calculateWrappedDistance(this.x, this.y, food.x, food.y);
@@ -723,8 +713,8 @@
                 }
 
                 for (const creature of creatures) {
-                    const distance = this.calculateWrappedDistance(this.x, this.y, creature.x, creature.y);
                     if (creature !== this) {
+                        const distance = this.calculateWrappedDistance(this.x, this.y, creature.x, creature.y);
                         if (creature.size > this.size && colorDifference(this.color, creature.color) > CONFIG.colorDifferenceThreshold && distance <= this.visionRange && distance < nearestDangerDistance) {
                             nearestDangerDistance = distance;
                             nearestDanger = creature;
@@ -735,17 +725,35 @@
                     }
                 }
 
+                this.seekingFood = false;
+                let targetDirection = this.direction;
+
+                if (nearestFood) {
+                    targetDirection = Math.atan2(nearestFood.y - this.y, nearestFood.x - this.x);
+                    this.seekingFood = true;
+                } else if (nearestDanger) {
+                    targetDirection = (Math.atan2(nearestDanger.y - this.y, nearestDanger.x - this.x) + Math.PI) % (2 * Math.PI); // Move away
+                } else if (nearestPrey) {
+                    targetDirection = Math.atan2(nearestPrey.y - this.y, nearestPrey.x - this.x);
+                }
+
+                // Smooth turn towards target direction
+                const turnAmount = Math.PI / 10; // Adjust for smoother or quicker turns
+                this.direction = this.direction + Math.sign(targetDirection - this.direction) * turnAmount;
+                this.direction = this.direction % (2 * Math.PI);
+
                 const inputs = [
                     nearestFood ? nearestFoodDistance / this.visionRange : 1,
                     nearestDanger ? nearestDangerDistance / this.visionRange : 1,
                     nearestPrey ? nearestPreyDistance / this.visionRange : 1,
+                    Math.cos(targetDirection - this.direction),  // Angle to target relative to current direction
+                    Math.sin(targetDirection - this.direction),
                     this.energy / this.maxEnergy
                 ];
 
-                const output = this.brain.feedforward([inputs]);
-
-                this.direction = this.direction + (output[0][0] - 0.5) * Math.PI;
-                this.speed = output[0][1] * this.maxSpeed;
+                const outputs = this.brain.feedforward([inputs]);
+                this.speed = outputs[0][0] * this.maxSpeed; // Speed decision
+                this.acceleration = outputs[0][1] * this.maxAcceleration; // Acceleration decision
             }
 
             calculateWrappedDistance(x1, y1, x2, y2) {
@@ -932,6 +940,30 @@
                         randomizeAllCreatureColors();
                     } else {
                         this.color = randomColor();
+                    }
+                }
+            }
+
+            preventOverlap() {
+                for (let other of creatures) {
+                    if (other !== this && other.alive) {
+                        let distance = this.calculateWrappedDistance(this.x, this.y, other.x, other.y);
+                        let minDistance = (this.size + other.size) * 0.75; // 25% overlap allowed
+
+                        if (distance < minDistance) {
+                            let overlap = minDistance - distance;
+                            let angle = Math.atan2(other.y - this.y, other.x - this.x);
+                            
+                            // Only push the smaller creature
+                            let smallerCreature = this.size < other.size ? this : other;
+                            let pushBack = overlap; // Only the smaller one moves the full distance
+
+                            smallerCreature.x -= pushBack * Math.cos(angle);
+                            smallerCreature.y -= pushBack * Math.sin(angle);
+
+                            // Ensure the smaller creature doesn't move outside the canvas after push
+                            smallerCreature.wrapAroundCanvas();
+                        }
                     }
                 }
             }
