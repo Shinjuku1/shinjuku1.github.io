@@ -25,8 +25,8 @@
             font-family: Arial, sans-serif; 
             font-size: 1.5vh; 
             user-select: none; 
-            pointer-events: none; /* Allow clicks to pass through */
-            transition: opacity 0.5s; /* Smooth fade transition */
+            pointer-events: none;
+            transition: opacity 0.5s;
         }
         #creatureCounter {
             right: 1vh;
@@ -45,8 +45,8 @@
             position: absolute;
             bottom: 2vh;
             right: 2vh;
-            width: calc(100vw - 4vh); /* Width adjusts to height but uses vw for width */
-            max-width: 600px; /* Ensure readability on larger screens */
+            width: calc(100vw - 4vh);
+            max-width: 600px;
             background-color: rgba(0, 0, 0, 0.9);
             border: 1px solid #fff;
             border-radius: 10px;
@@ -56,7 +56,6 @@
             gap: 0.5vh;
             z-index: 1000;
         }
-
         .option {
             display: flex;
             justify-content: space-between;
@@ -66,19 +65,16 @@
             font-size: 1.2vh;
             margin-bottom: 0.5vh;
         }
-
         .option label {
             flex: 1;
             text-align: left;
         }
-
         .option input[type="range"],
         .option input[type="number"] {
             margin-left: 0.5vh;
             margin-right: 0.5vh;
             border-radius: 5px;
         }
-
         .option input[type="number"] {
             width: 6vh;
             background: transparent;
@@ -88,18 +84,15 @@
             font-size: 1.2vh;
             text-align: center;
         }
-
         .slider-label {
             color: white;
             font-family: Arial, sans-serif;
             font-size: 1.2vh;
             user-select: none;
         }
-
         .slider {
             flex: 1;
         }
-
         #gearIcon {
             position: absolute;
             bottom: 1vh;
@@ -109,13 +102,11 @@
             color: white;
             z-index: 1000;
         }
-
         .tabs {
             display: flex;
             cursor: pointer;
             margin-bottom: 0.5vh;
         }
-
         .tab {
             flex: 1;
             padding: 0.5vh;
@@ -126,26 +117,21 @@
             border-radius: 5px;
             font-size: 1.2vh;
         }
-
         .tab.active {
             background: #555;
         }
-
         .tab-content {
             display: none;
         }
-
         .tab-content.active {
             display: block;
         }
-
         .save-slot {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 0.5vh;
         }
-
         .save-slot input {
             width: 60%;
             background: transparent;
@@ -156,9 +142,9 @@
             text-align: center;
             border-radius: 5px;
         }
-
         .save-slot button,
-        .reset-button {
+        .reset-button,
+        #pauseButton {
             width: 35%;
             background: #444;
             border: 1px solid #fff;
@@ -168,8 +154,6 @@
             cursor: pointer;
             border-radius: 5px;
         }
-
-        /* Media query for smaller screens */
         @media screen and (max-height: 400px) {
             #optionsMenu {
                 bottom: 1vh;
@@ -186,7 +170,7 @@
                 width: 100%;
                 margin-top: 0.5vh;
             }
-            .save-slot button {
+            .save-slot button, #pauseButton {
                 width: 100%;
                 margin-top: 0.5vh;
             }
@@ -245,11 +229,6 @@
                 <input type="number" id="foodEnergyNumber" min="0" max="500" step="1" value="25">
             </div>
             <div class="option">
-                <label for="energyConsumptionRate" class="slider-label">Energy Consumption Rate</label>
-                <input type="range" id="energyConsumptionRate" min="0" max="100" step="1" value="50">
-                <input type="number" id="energyConsumptionRateNumber" min="0" max="100" step="1" value="50">
-            </div>
-            <div class="option">
                 <label for="foodSpawnInterval" class="slider-label">Food Spawn Interval (ms)</label>
                 <input type="range" id="foodSpawnInterval" min="0" max="10000" step="100" value="1000">
                 <input type="number" id="foodSpawnIntervalNumber" min="0" max="10000" step="100" value="1000">
@@ -270,7 +249,7 @@
                 <input type="number" id="maxEnergyNumber" min="0" max="10000" step="100" value="2000">
             </div>
             <div class="option">
-                <label for="baseMutationRate" class="slider-label">Base Mutation Rate</label>
+                <label for="baseMutationRate" class="slider-label">Mutation Rate</label>
                 <input type="range" id="baseMutationRate" min="0" max="1" step="0.01" value="0.1">
                 <input type="number" id="baseMutationRateNumber" min="0" max="1" step="0.01" value="0.1">
             </div>
@@ -281,8 +260,8 @@
             </div>
             <div class="option">
                 <label for="foodGrowthRate" class="slider-label">Food Growth Rate</label>
-                <input type="range" id="foodGrowthRate" min="0" max="10" step="0.1" value="0.2">
-                <input type="number" id="foodGrowthRateNumber" min="0" max="10" step="0.1" value="0.2">
+                <input type="range" id="foodGrowthRate" min="0.05" max="10" step="0.001" value="0.75">
+                <input type="number" id="foodGrowthRateNumber" min="0.05" max="10" step="0.001" value="0.75">
             </div>
             <div class="option">
                 <label for="offspringEnergyFraction" class="slider-label">Offspring Energy Fraction</label>
@@ -293,11 +272,6 @@
                 <label for="absorptionRate" class="slider-label">Absorption Rate</label>
                 <input type="range" id="absorptionRate" min="0" max="100" step="1" value="50">
                 <input type="number" id="absorptionRateNumber" min="0" max="100" step="1" value="50">
-            </div>
-            <div class="option">
-                <label for="maxAILevel" class="slider-label">Max AI Level</label>
-                <input type="range" id="maxAILevel" min="0" max="100" step="1" value="20">
-                <input type="number" id="maxAILevelNumber" min="0" max="100" step="1" value="20">
             </div>
             <div class="option">
                 <label for="sizeEnergyMultiplier" class="slider-label">Size Energy Multiplier</label>
@@ -321,14 +295,15 @@
             </div>
             <div class="option">
                 <label for="baseEnergyLossRate" class="slider-label">Base Energy Loss Rate</label>
-                <input type="range" id="baseEnergyLossRate" min="0" max="200" step="0.01" value="5">
-                <input type="number" id="baseEnergyLossRateNumber" min="0" max="200" step="0.01" value="5">
+                <input type="range" id="baseEnergyLossRate" min="0" max="1" step="0.01" value="0.1">
+                <input type="number" id="baseEnergyLossRateNumber" min="0" max="1" step="0.01" value="0.1">
             </div>
             <div class="option">
                 <label for="targetCreatureCount" class="slider-label">Target Creature Count</label>
                 <input type="range" id="targetCreatureCount" min="0" max="1000" step="10" value="250">
                 <input type="number" id="targetCreatureCountNumber" min="0" max="1000" step="10" value="250">
             </div>
+            <button id="pauseButton">Pause</button>
         </div>
         <div id="save" class="tab-content">
             <div class="save-slot">
@@ -383,7 +358,10 @@
             </div>
         </div>        
         <div id="reset" class="tab-content">
-            <button class="reset-button" onclick="resetSimulation()">Reset Simulation</button>
+            <button class="reset-button" onclick="resetSettings()">Reset Settings</button>
+            <button class="reset-button" onclick="resetPopulation()">Reset Enities</button>
+            <button class="reset-button" onclick="resetSimulation()">Reset All</button>
+            <button class="reset-button" onclick="deleteAllSaves()">Delete All Saves</button>
         </div>      
     </div>   
     <script>
@@ -395,28 +373,31 @@
             foodEnergy: 25,
             maxFoodSize: 60,
             minFoodSize: 0.2,
-            energyConsumptionRate: 10,
             foodSpawnInterval: 1000,
             visionRangeFactor: 30,
             maxSpeed: 200,
             maxEnergy: 2000,
             baseMutationRate: 0.1,
             colorDifferenceThreshold: 36,
-            foodGrowthRate: 0.2,
+            foodGrowthRate: 0.75,
             offspringEnergyFraction: 0.25,
             absorptionRate: 10,
-            maxAILevel: 5,
             sizeEnergyMultiplier: 1,
             speedEnergyMultiplier: 5,
             maxAcceleration: 20,
             desiredAverageSpeed: 50,
-            baseEnergyLossRate: 0.5,
+            baseEnergyLossRate: 0.1,
             initialCreatures: 300,
             initialFoodItems: 1000,
             targetCreatureCount: 250,
-            adjustmentRate: 0.5,
-            overlayFadeDelay: 10000
+            adjustmentRate: 0.0001,
+            overlayFadeDelay: 10000,
+            maxNearbyFood: 10,
+            maxNearbyCreatures: 5
         };
+
+        const defaultCreatureSize = 0.7;
+        const defaultFoodSize = 0.5;
 
         let CONFIG = { ...defaultConfig };
 
@@ -432,6 +413,7 @@
         const foodSizeNumber = document.getElementById('foodSizeNumber');
         const optionsMenu = document.getElementById('optionsMenu');
         const gearIcon = document.getElementById('gearIcon');
+        const pauseButton = document.getElementById('pauseButton');
 
         const options = [
             { slider: 'maxFoodItems', number: 'maxFoodItemsNumber' },
@@ -439,7 +421,6 @@
             { slider: 'maxCreatures', number: 'maxCreaturesNumber' },
             { slider: 'minCreatures', number: 'minCreaturesNumber' },
             { slider: 'foodEnergy', number: 'foodEnergyNumber' },
-            { slider: 'energyConsumptionRate', number: 'energyConsumptionRateNumber' },
             { slider: 'foodSpawnInterval', number: 'foodSpawnIntervalNumber' },
             { slider: 'visionRangeFactor', number: 'visionRangeFactorNumber' },
             { slider: 'maxSpeed', number: 'maxSpeedNumber' },
@@ -449,13 +430,12 @@
             { slider: 'foodGrowthRate', number: 'foodGrowthRateNumber' },
             { slider: 'offspringEnergyFraction', number: 'offspringEnergyFractionNumber' },
             { slider: 'absorptionRate', number: 'absorptionRateNumber' },
-            { slider: 'maxAILevel', number: 'maxAILevelNumber' },
             { slider: 'sizeEnergyMultiplier', number: 'sizeEnergyMultiplierNumber' },
             { slider: 'speedEnergyMultiplier', number: 'speedEnergyMultiplierNumber' },
             { slider: 'maxAcceleration', number: 'maxAccelerationNumber' },
             { slider: 'desiredAverageSpeed', number: 'desiredAverageSpeedNumber' },
             { slider: 'baseEnergyLossRate', number: 'baseEnergyLossRateNumber' },
-            { slider: 'targetCreatureCount', number: 'targetCreatureCountNumber' },
+            { slider: 'targetCreatureCount', number: 'targetCreatureCountNumber' }
         ];
 
         let creatures = [];
@@ -465,10 +445,13 @@
         let kingCreature = null;
         let lastClickedCreature = null;
         let lastClickTime = 0;
+        let isPaused = false;
 
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
+            creatures.forEach(creature => creature.wrapAroundCanvas());
+            foodItems.forEach(food => food.wrapAroundCanvas());
         }
 
         window.addEventListener('resize', resizeCanvas);
@@ -505,7 +488,8 @@
 
         function updateCreatureStats() {
             if (lastClickedCreature && lastClickedCreature.alive) {
-                creatureStats.textContent = `Creature Stats:\nSize: ${lastClickedCreature.size.toFixed(2)}\nEnergy: ${lastClickedCreature.energy.toFixed(2)}\nMax Energy: ${lastClickedCreature.maxEnergy.toFixed(2)}\nSpeed: ${lastClickedCreature.speed.toFixed(2)}\nAcceleration: ${lastClickedCreature.acceleration.toFixed(2)}\nEnergy Loss Rate: ${lastClickedCreature.energyLossRate.toFixed(5)}\nColor: ${lastClickedCreature.color}\nAI Level: ${lastClickedCreature.aiLevel}`;
+                const energyLossRate = lastClickedCreature.baseEnergyLossRate * lastClickedCreature.size;
+                creatureStats.textContent = `Creature Stats:\nSize: ${lastClickedCreature.size.toFixed(2)}\nEnergy: ${lastClickedCreature.energy.toFixed(2)}\nMax Energy: ${lastClickedCreature.maxEnergy.toFixed(2)}\nSpeed: ${lastClickedCreature.speed.toFixed(2)}\nAcceleration: ${lastClickedCreature.acceleration.toFixed(2)}\nEnergy Loss Rate: ${energyLossRate.toFixed(5)}\nColor: ${lastClickedCreature.color}`;
             } else {
                 creatureStats.textContent = '';
             }
@@ -628,16 +612,14 @@
             }
 
             wrapAroundCanvas() {
-                if (this.x < 0) this.x = canvas.width;
-                if (this.x > canvas.width) this.x = 0;
-                if (this.y < 0) this.y = canvas.height;
-                if (this.y > canvas.height) this.y = 0;
+                this.x = (this.x % canvas.width + canvas.width) % canvas.width;
+                this.y = (this.y % canvas.height + canvas.height) % canvas.height;
             }
 
             isOutOfBounds() {
                 return (
-                    this.x < 0 || this.x > canvas.width ||
-                    this.y < 0 || this.y > canvas.height
+                    this.x < 0 || this.x >= canvas.width ||
+                    this.y < 0 || this.y >= canvas.height
                 );
             }
         }
@@ -661,13 +643,12 @@
                 this.maxSpeed = traits.maxSpeed || CONFIG.maxSpeed * CONFIG.speedEnergyMultiplier / this.size;
                 this.acceleration = 0;
                 this.maxAcceleration = traits.maxAcceleration || CONFIG.maxAcceleration;
-                this.deceleration = this.maxAcceleration / 2;  // Assuming deceleration is half of acceleration
-                this.energyLossRate = traits.energyLossRate || CONFIG.baseEnergyLossRate;
+                this.deceleration = this.maxAcceleration / 2;
+                this.baseEnergyLossRate = traits.baseEnergyLossRate || CONFIG.baseEnergyLossRate;
 
                 this.visionRange = this.calculateVisionRange();
-                this.aiLevel = traits.aiLevel || 1;
 
-                this.brain = traits.brain ? new NeuralNetwork(traits.brain.layerSizes) : new NeuralNetwork([6, 8, 3]); // 6 inputs, 3 outputs
+                this.brain = traits.brain ? new NeuralNetwork(traits.brain.layerSizes) : new NeuralNetwork([9, 16, 3]);
                 if (traits.brain) {
                     this.brain.weights = traits.brain.weights;
                     this.brain.biases = traits.brain.biases;
@@ -684,7 +665,7 @@
                     return;
                 }
 
-                if (!this.dragging) {
+                if (!this.dragging && !isPaused) {
                     const speedScale = canvas.width / 1920;
 
                     const previousX = this.x;
@@ -697,7 +678,6 @@
 
                     let targetSpeed = this.maxSpeed * turnFactor;
                     
-                    // Adjust speed based on whether we're seeking food or escaping
                     if (this.seekingFood) {
                         targetSpeed = Math.min(this.maxSpeed, this.speed + this.acceleration * deltaTime);
                     } else {
@@ -711,45 +691,72 @@
                     this.y += Math.sin(this.direction) * moveStep;
 
                     const distanceTraveled = Math.hypot(this.x - previousX, this.y - previousY);
-                    this.energy -= distanceTraveled * this.energyLossRate;
+                    const energyLossRate = this.baseEnergyLossRate * this.size;
+                    this.energy -= distanceTraveled * energyLossRate;
 
                     this.wrapAroundCanvas();
                     this.size = Math.sqrt(this.energy) * CONFIG.sizeEnergyMultiplier * parseFloat(creatureSizeSlider.value);
                     
-                    // Prevent overlapping by more than 25%
                     this.preventOverlap();
                 }
             }
 
             wrapAroundCanvas() {
-                if (this.x < 0) this.x = canvas.width;
-                if (this.x > canvas.width) this.x = 0;
-                if (this.y < 0) this.y = canvas.height;
-                if (this.y > canvas.height) this.y = 0;
+                this.x = (this.x % canvas.width + canvas.width) % canvas.width;
+                this.y = (this.y % canvas.height + canvas.height) % canvas.height;
             }
 
             seekFoodOrAvoidDanger() {
                 this.visionRange = this.calculateVisionRange();
-                let nearestFood = null, nearestDanger = null, nearestPrey = null;
-                let nearestFoodDistance = Infinity, nearestDangerDistance = Infinity, nearestPreyDistance = Infinity;
-
-                for (const food of foodItems) {
-                    const distance = this.calculateWrappedDistance(this.x, this.y, food.x, food.y);
-                    if (distance < nearestFoodDistance && distance <= this.visionRange) {
-                        nearestFoodDistance = distance;
-                        nearestFood = food;
+                const numCols = 20;
+                const cellSize = canvas.width / numCols;
+                const numRows = Math.ceil(canvas.height / cellSize);
+                const col = Math.floor(this.x / cellSize);
+                const row = Math.floor(this.y / cellSize);
+                
+                const cellsToCheck = [];
+                for (let dRow = -1; dRow <= 1; dRow++) {
+                    for (let dCol = -1; dCol <= 1; dCol++) {
+                        const neighborRow = (row + dRow + numRows) % numRows;
+                        const neighborCol = (col + dCol + numCols) % numCols;
+                        cellsToCheck.push(grid[neighborRow][neighborCol]);
                     }
                 }
 
-                for (const creature of creatures) {
+                let nearbyFood = [];
+                let nearbyCreatures = [];
+                cellsToCheck.forEach(cell => {
+                    nearbyFood.push(...cell.foodItems);
+                    nearbyCreatures.push(...cell.creatures);
+                });
+
+                let nearestFood = null, nearestDanger = null, nearestPrey = null;
+                let nearestFoodDistance = Infinity, nearestDangerDistance = Infinity, nearestPreyDistance = Infinity;
+                let numNearbyFood = 0, numNearbyCreatures = 0;
+
+                for (const food of nearbyFood) {
+                    const distance = this.calculateWrappedDistance(this.x, this.y, food.x, food.y);
+                    if (distance <= this.visionRange) {
+                        numNearbyFood++;
+                        if (distance < nearestFoodDistance) {
+                            nearestFoodDistance = distance;
+                            nearestFood = food;
+                        }
+                    }
+                }
+
+                for (const creature of nearbyCreatures) {
                     if (creature !== this) {
                         const distance = this.calculateWrappedDistance(this.x, this.y, creature.x, creature.y);
-                        if (creature.size > this.size && colorDifference(this.color, creature.color) > CONFIG.colorDifferenceThreshold && distance <= this.visionRange && distance < nearestDangerDistance) {
-                            nearestDangerDistance = distance;
-                            nearestDanger = creature;
-                        } else if (creature.size < this.size && colorDifference(this.color, creature.color) > CONFIG.colorDifferenceThreshold && distance <= this.visionRange && distance < nearestPreyDistance && creature.parent !== kingCreature) {
-                            nearestPreyDistance = distance;
-                            nearestPrey = creature;
+                        if (distance <= this.visionRange) {
+                            numNearbyCreatures++;
+                            if (creature.size > this.size && colorDifference(this.color, creature.color) > CONFIG.colorDifferenceThreshold && distance < nearestDangerDistance) {
+                                nearestDangerDistance = distance;
+                                nearestDanger = creature;
+                            } else if (creature.size < this.size && colorDifference(this.color, creature.color) > CONFIG.colorDifferenceThreshold && distance < nearestPreyDistance && creature.parent !== kingCreature) {
+                                nearestPreyDistance = distance;
+                                nearestPrey = creature;
+                            }
                         }
                     }
                 }
@@ -761,13 +768,12 @@
                     targetDirection = Math.atan2(nearestFood.y - this.y, nearestFood.x - this.x);
                     this.seekingFood = true;
                 } else if (nearestDanger) {
-                    targetDirection = (Math.atan2(nearestDanger.y - this.y, nearestDanger.x - this.x) + Math.PI) % (2 * Math.PI); // Move away
+                    targetDirection = (Math.atan2(nearestDanger.y - this.y, nearestDanger.x - this.x) + Math.PI) % (2 * Math.PI);
                 } else if (nearestPrey) {
                     targetDirection = Math.atan2(nearestPrey.y - this.y, nearestPrey.x - this.x);
                 }
 
-                // Smooth turn towards target direction
-                const turnAmount = Math.PI / 10; // Adjust for smoother or quicker turns
+                const turnAmount = Math.PI / 10;
                 this.direction = this.direction + Math.sign(targetDirection - this.direction) * turnAmount;
                 this.direction = this.direction % (2 * Math.PI);
 
@@ -775,14 +781,17 @@
                     nearestFood ? nearestFoodDistance / this.visionRange : 1,
                     nearestDanger ? nearestDangerDistance / this.visionRange : 1,
                     nearestPrey ? nearestPreyDistance / this.visionRange : 1,
-                    Math.cos(targetDirection - this.direction),  // Angle to target relative to current direction
+                    Math.cos(targetDirection - this.direction),
                     Math.sin(targetDirection - this.direction),
-                    this.energy / this.maxEnergy
+                    this.energy / this.maxEnergy,
+                    this.speed / this.maxSpeed,
+                    numNearbyFood / CONFIG.maxNearbyFood,
+                    numNearbyCreatures / CONFIG.maxNearbyCreatures
                 ];
 
                 const outputs = this.brain.feedforward([inputs]);
-                this.speed = outputs[0][0] * this.maxSpeed; // Speed decision
-                this.acceleration = outputs[0][1] * this.maxAcceleration; // Acceleration decision
+                this.speed = outputs[0][0] * this.maxSpeed;
+                this.acceleration = outputs[0][1] * this.maxAcceleration;
             }
 
             calculateWrappedDistance(x1, y1, x2, y2) {
@@ -870,8 +879,7 @@
                         visionRange: mutateValue(this.visionRange, CONFIG.baseMutationRate),
                         maxEnergy: mutateValue(this.maxEnergy, CONFIG.baseMutationRate * 2),
                         color: mutateColor(this.color),
-                        aiLevel: this.mutateAILevel(this.aiLevel, CONFIG.baseMutationRate),
-                        energyLossRate: mutateValue(this.energyLossRate, CONFIG.baseMutationRate / 20),
+                        baseEnergyLossRate: mutateValue(this.baseEnergyLossRate, CONFIG.baseMutationRate / 20),
                         brain: {
                             layerSizes: this.brain.weights.map(w => w.length),
                             weights: this.brain.weights.map(w => w.map(row => row.slice())),
@@ -884,18 +892,6 @@
                     creatures.push(offspring);
                     updateCounters();
                 }
-            }
-
-            mutateAILevel() {
-                let newAILevel = this.aiLevel;
-                const mutationChance = Math.random();
-
-                if (mutationChance < 0.05 && newAILevel < CONFIG.maxAILevel) {
-                    newAILevel++;
-                } else if (mutationChance > 0.95 && newAILevel > 1) {
-                    newAILevel--;
-                }
-                return newAILevel;
             }
 
             shiftColor() {
@@ -977,20 +973,17 @@
                 for (let other of creatures) {
                     if (other !== this && other.alive) {
                         let distance = this.calculateWrappedDistance(this.x, this.y, other.x, other.y);
-                        let minDistance = (this.size + other.size) * 0.75; // 25% overlap allowed
+                        let minDistance = (this.size + other.size) * 0.75;
 
                         if (distance < minDistance) {
                             let overlap = minDistance - distance;
                             let angle = Math.atan2(other.y - this.y, other.x - this.x);
-                            
-                            // Only push the smaller creature
                             let smallerCreature = this.size < other.size ? this : other;
-                            let pushBack = overlap; // Only the smaller one moves the full distance
+                            let pushBack = overlap;
 
                             smallerCreature.x -= pushBack * Math.cos(angle);
                             smallerCreature.y -= pushBack * Math.sin(angle);
 
-                            // Ensure the smaller creature doesn't move outside the canvas after push
                             smallerCreature.wrapAroundCanvas();
                         }
                     }
@@ -1004,12 +997,14 @@
                 traits.energy = traits.maxEnergy * 0.1;
             }
             const newCreature = new Creature(x, y, traits, parent);
+            newCreature.wrapAroundCanvas();
             creatures.push(newCreature);
             updateCounters();
         }
 
         function spawnFood(x, y, energy = CONFIG.foodEnergy * 0.1) {
             const newFood = new Food(x, y, energy);
+            newFood.wrapAroundCanvas();
             foodItems.push(newFood);
             updateCounters();
         }
@@ -1037,6 +1032,7 @@
         initialSpawn();
 
         let lastFrameTime = performance.now(), frameCount = 0, fps = 0;
+        let grid;
 
         function updateFPS() {
             const now = performance.now();
@@ -1062,11 +1058,12 @@
             }
         }
 
-        function adjustEnergyConsumptionRate() {
-            const error = creatures.length - CONFIG.targetCreatureCount;
-            CONFIG.energyConsumptionRate += error * CONFIG.adjustmentRate;
-
-            CONFIG.energyConsumptionRate = Math.max(0.1, CONFIG.energyConsumptionRate);
+        function adjustFoodGrowthRate() {
+            const error = CONFIG.targetCreatureCount - creatures.length;
+            CONFIG.foodGrowthRate += error * CONFIG.adjustmentRate;
+            CONFIG.foodGrowthRate = Math.max(0.75, CONFIG.foodGrowthRate);
+            document.getElementById('foodGrowthRate').value = CONFIG.foodGrowthRate;
+            document.getElementById('foodGrowthRateNumber').value = CONFIG.foodGrowthRate;
         }
 
         function calculateAverageSpeed() {
@@ -1090,48 +1087,69 @@
             const deltaTime = (now - lastFrameTime) / 1000;
             lastFrameTime = now;
 
-            for (let i = foodItems.length - 1; i >= 0; i--) {
-                const food = foodItems[i];
-                if (food.isOutOfBounds()) {
-                    despawnFood(i);
-                } else {
-                    food.grow();
-                    food.draw();
-                }
-            }
+            const numCols = 20;
+            const cellSize = canvas.width / numCols;
+            const numRows = Math.ceil(canvas.height / cellSize);
+            grid = Array.from({ length: numRows }, () => Array.from({ length: numCols }, () => ({ creatures: [], foodItems: [] })));
 
-            for (let i = creatures.length - 1; i >= 0; i--) {
-                const creature = creatures[i];
-                if (creature.alive) {
-                    creature.move(deltaTime);
-                    creature.eat();
-                    creature.absorb();
-                    creature.reproduce();
-                    creature.draw();
-                } else {
-                    if (kingCreature === creature) {
-                        kingCreature = null;
+            creatures.forEach(creature => {
+                const col = Math.floor(creature.x / cellSize);
+                const row = Math.floor(creature.y / cellSize);
+                grid[row][col].creatures.push(creature);
+            });
+
+            foodItems.forEach(food => {
+                const col = Math.floor(food.x / cellSize);
+                const row = Math.floor(food.y / cellSize);
+                grid[row][col].foodItems.push(food);
+            });
+
+            if (!isPaused) {
+                for (let i = foodItems.length - 1; i >= 0; i--) {
+                    const food = foodItems[i];
+                    if (food.isOutOfBounds()) {
+                        despawnFood(i);
+                    } else {
+                        food.grow();
                     }
-                    despawnCreature(i);
                 }
+
+                for (let i = creatures.length - 1; i >= 0; i--) {
+                    const creature = creatures[i];
+                    if (creature.alive) {
+                        creature.move(deltaTime);
+                        creature.eat();
+                        creature.absorb();
+                        creature.reproduce();
+                    } else {
+                        if (kingCreature === creature) {
+                            kingCreature = null;
+                        }
+                        despawnCreature(i);
+                    }
+                }
+
+                if (!kingCreature && creatures.length > 0) {
+                    kingCreature = creatures[Math.floor(Math.random() * creatures.length)];
+                }
+
+                if (kingCreature) {
+                    kingCreature.shiftColor();
+                }
+
+                if (foodItems.length < CONFIG.maxFoodItems && Date.now() - lastFoodSpawnTime > CONFIG.foodSpawnInterval) {
+                    spawnFood(Math.random() * canvas.width, Math.random() * canvas.height);
+                    lastFoodSpawnTime = Date.now();
+                }
+
+                enforceMinMaxCounts();
+                adjustFoodGrowthRate();
+                regulateCreatureSpeed();
             }
 
-            if (!kingCreature && creatures.length > 0) {
-                kingCreature = creatures[Math.floor(Math.random() * creatures.length)];
-            }
+            foodItems.forEach(food => food.draw());
+            creatures.forEach(creature => creature.draw());
 
-            if (kingCreature) {
-                kingCreature.shiftColor();
-            }
-
-            if (foodItems.length < CONFIG.maxFoodItems && Date.now() - lastFoodSpawnTime > CONFIG.foodSpawnInterval) {
-                spawnFood(Math.random() * canvas.width, Math.random() * canvas.height);
-                lastFoodSpawnTime = Date.now();
-            }
-
-            enforceMinMaxCounts();
-            adjustEnergyConsumptionRate();
-            regulateCreatureSpeed();
             updateFPS();
             updateCreatureStats();
             fadeOverlayText();
@@ -1205,25 +1223,29 @@
             slotNameInput.value = slotName;
 
             const state = {
-                creatures: creatures.map(creature => ({
-                    x: creature.x,
-                    y: creature.y,
-                    maxEnergy: creature.maxEnergy,
-                    energy: creature.energy,
-                    size: creature.size,
-                    color: creature.color,
-                    maxSpeed: creature.maxSpeed,
-                    maxAcceleration: creature.maxAcceleration,
-                    energyLossRate: creature.energyLossRate,
-                    visionRange: creature.visionRange,
-                    aiLevel: creature.aiLevel,
-                    isKing: kingCreature === creature,
-                    brain: {
-                        layerSizes: creature.brain.weights.map(w => w.length),
-                        weights: creature.brain.weights.map(w => w.map(row => row.slice())),
-                        biases: creature.brain.biases.map(b => b.map(row => row.slice()))
-                    }
-                })),
+                creatures: creatures.map(creature => {
+                    const layerSizes = [creature.brain.weights[0].length];
+                    creature.brain.weights.forEach(w => layerSizes.push(w[0].length));
+                    return {
+                        x: creature.x,
+                        y: creature.y,
+                        maxEnergy: creature.maxEnergy,
+                        energy: creature.energy,
+                        size: creature.size,
+                        color: creature.color,
+                        maxSpeed: creature.maxSpeed,
+                        maxAcceleration: creature.maxAcceleration,
+                        baseEnergyLossRate: creature.baseEnergyLossRate,
+                        visionRange: creature.visionRange,
+                        isKing: kingCreature === creature,
+                        parentIndex: creature.parent ? creatures.indexOf(creature.parent) : -1,
+                        brain: {
+                            layerSizes: layerSizes,
+                            weights: creature.brain.weights.map(w => w.map(row => row.slice())),
+                            biases: creature.brain.biases.map(b => b.map(row => row.slice()))
+                        }
+                    };
+                }),
                 foodItems: foodItems.map(food => ({
                     x: food.x,
                     y: food.y,
@@ -1231,6 +1253,8 @@
                     size: food.size
                 })),
                 config: { ...CONFIG },
+                creatureSize: parseFloat(creatureSizeSlider.value),
+                foodSize: parseFloat(foodSizeSlider.value),
                 saveSlotName: slotName
             };
             localStorage.setItem(`saveSlot${slot}`, JSON.stringify(state));
@@ -1255,9 +1279,8 @@
                                 color: creatureData.color,
                                 maxSpeed: creatureData.maxSpeed,
                                 maxAcceleration: creatureData.maxAcceleration,
-                                energyLossRate: creatureData.energyLossRate,
+                                baseEnergyLossRate: creatureData.baseEnergyLossRate || creatureData.energyLossRate,
                                 visionRange: creatureData.visionRange,
-                                aiLevel: creatureData.aiLevel,
                                 brain: {
                                     layerSizes: creatureData.brain.layerSizes,
                                     weights: creatureData.brain.weights,
@@ -1269,6 +1292,14 @@
                             kingCreature = creature;
                         }
                         creatures.push(creature);
+                    });
+
+                    state.creatures.forEach((creatureData, index) => {
+                        if (creatureData.parentIndex !== -1) {
+                            creatures[index].parent = creatures[creatureData.parentIndex];
+                        } else {
+                            creatures[index].parent = null;
+                        }
                     });
 
                     state.foodItems.forEach(foodData => {
@@ -1286,10 +1317,24 @@
                     options.forEach(option => {
                         const slider = document.getElementById(option.slider);
                         const number = document.getElementById(option.number);
-
                         slider.value = CONFIG[option.slider];
                         number.value = CONFIG[option.slider];
                     });
+
+                    if (state.creatureSize) {
+                        creatureSizeSlider.value = state.creatureSize;
+                        creatureSizeNumber.value = state.creatureSize;
+                        creatures.forEach(creature => {
+                            creature.size = Math.sqrt(creature.energy) * CONFIG.sizeEnergyMultiplier * state.creatureSize;
+                        });
+                    }
+                    if (state.foodSize) {
+                        foodSizeSlider.value = state.foodSize;
+                        foodSizeNumber.value = state.foodSize;
+                        foodItems.forEach(food => {
+                            food.size = Math.sqrt(food.energy) * state.foodSize;
+                        });
+                    }
 
                     updateCounters();
                 }
@@ -1298,21 +1343,44 @@
             }
         }
 
-        function resetSimulation() {
-            creatures.length = 0;
-            foodItems.length = 0;
+        function resetSettings() {
             CONFIG = { ...defaultConfig };
-
             options.forEach(option => {
                 const slider = document.getElementById(option.slider);
                 const number = document.getElementById(option.number);
-
                 slider.value = defaultConfig[option.slider];
                 number.value = defaultConfig[option.slider];
             });
+            creatureSizeSlider.value = defaultCreatureSize;
+            creatureSizeNumber.value = defaultCreatureSize;
+            foodSizeSlider.value = defaultFoodSize;
+            foodSizeNumber.value = defaultFoodSize;
+            creatures.forEach(creature => {
+                creature.size = Math.sqrt(creature.energy) * CONFIG.sizeEnergyMultiplier * defaultCreatureSize;
+            });
+            foodItems.forEach(food => {
+                food.size = Math.sqrt(food.energy) * defaultFoodSize;
+            });
+        }
 
+        function resetPopulation() {
+            creatures.length = 0;
+            foodItems.length = 0;
             initialSpawn();
             updateCounters();
+        }
+
+        function resetSimulation() {
+            resetSettings();
+            resetPopulation();
+        }
+
+        function deleteAllSaves() {
+            for (let i = 1; i <= 10; i++) {
+                localStorage.removeItem(`saveSlot${i}`);
+                const slotNameInput = document.getElementById(`saveSlotName${i}`);
+                slotNameInput.value = `Save Slot ${i}`;
+            }
         }
 
         canvas.addEventListener('mousedown', e => handleInteraction(e, 'Start'));
@@ -1360,6 +1428,11 @@
             creatureStats.style.opacity = isMenuVisible ? 0 : 1;
         });
 
+        pauseButton.addEventListener('click', () => {
+            isPaused = !isPaused;
+            pauseButton.textContent = isPaused ? 'Resume' : 'Pause';
+        });
+
         window.addEventListener('click', (event) => {
             if (!optionsMenu.contains(event.target) && event.target !== gearIcon) {
                 optionsMenu.style.display = 'none';
@@ -1392,7 +1465,11 @@
             });
 
             number.addEventListener('input', () => {
-                const value = parseFloat(number.value);
+                let value = parseFloat(number.value);
+                if (isNaN(value) || value < parseFloat(number.min) || value > parseFloat(number.max)) {
+                    value = parseFloat(slider.value);
+                    number.value = value;
+                }
                 slider.value = value;
                 CONFIG[option.slider] = value;
             });
