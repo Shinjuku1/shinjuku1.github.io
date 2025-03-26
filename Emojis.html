@@ -1,0 +1,5235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emoji Browser</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+      margin: 0;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    #search {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 20px;
+      font-size: 16px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    .category {
+      margin-bottom: 30px;
+    }
+    .category h2 {
+      font-size: 24px;
+      margin-bottom: 10px;
+      color: #333;
+    }
+    .emoji-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+      gap: 10px;
+    }
+    .emoji-item {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      cursor: pointer;
+      height: 50px;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+    }
+    .emoji-item:hover {
+      background-color: #f0f0f0;
+    }
+    .hidden {
+      display: none;
+    }
+    #toast {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #333;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 5px;
+      z-index: 1000;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <input type="text" id="search" placeholder="Search emojis...">
+    <div id="emoji-container"></div>
+  </div>
+  <div id="toast"></div>
+  <script>
+    // Basic emoji dataset
+    const emojiData = [
+  {
+    "unified": "1F479",
+    "name": "japanese ogre",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F47A",
+    "name": "japanese goblin",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F47B",
+    "name": "ghost",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F47D",
+    "name": "extraterrestrial alien",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F47E",
+    "name": "alien monster",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F47F",
+    "name": "imp",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F480",
+    "name": "skull",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F48B",
+    "name": "kiss mark",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F48C",
+    "name": "love letter",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F493",
+    "name": "beating heart",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F494",
+    "name": "broken heart",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F495",
+    "name": "two hearts",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F496",
+    "name": "sparkling heart",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F497",
+    "name": "growing heart",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F498",
+    "name": "heart with arrow",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F499",
+    "name": "blue heart",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F49A",
+    "name": "green heart",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F49B",
+    "name": "yellow heart",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F49C",
+    "name": "purple heart",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F49D",
+    "name": "heart with ribbon",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F49E",
+    "name": "revolving hearts",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F49F",
+    "name": "heart decoration",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F4A2",
+    "name": "anger symbol",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F4A4",
+    "name": "sleeping symbol",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F4A5",
+    "name": "collision symbol",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F4A6",
+    "name": "splashing sweat symbol",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F4A8",
+    "name": "dash symbol",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F4A9",
+    "name": "pile of poo",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F4AB",
+    "name": "dizzy symbol",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F4AC",
+    "name": "speech balloon",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F4AD",
+    "name": "thought balloon",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F4AF",
+    "name": "hundred points symbol",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F573-FE0F",
+    "name": "hole",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F5A4",
+    "name": "black heart",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F5E8-FE0F",
+    "name": "left speech bubble",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F5EF-FE0F",
+    "name": "right anger bubble",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F600",
+    "name": "grinning face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F601",
+    "name": "grinning face with smiling eyes",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F602",
+    "name": "face with tears of joy",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F603",
+    "name": "smiling face with open mouth",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F604",
+    "name": "smiling face with open mouth and smiling eyes",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F605",
+    "name": "smiling face with open mouth and cold sweat",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F606",
+    "name": "smiling face with open mouth and tightly-closed eyes",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F607",
+    "name": "smiling face with halo",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F608",
+    "name": "smiling face with horns",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F609",
+    "name": "winking face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F60A",
+    "name": "smiling face with smiling eyes",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F60B",
+    "name": "face savouring delicious food",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F60C",
+    "name": "relieved face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F60D",
+    "name": "smiling face with heart-shaped eyes",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F60E",
+    "name": "smiling face with sunglasses",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F60F",
+    "name": "smirking face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F610",
+    "name": "neutral face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F611",
+    "name": "expressionless face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F612",
+    "name": "unamused face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F613",
+    "name": "face with cold sweat",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F614",
+    "name": "pensive face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F615",
+    "name": "confused face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F616",
+    "name": "confounded face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F617",
+    "name": "kissing face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F618",
+    "name": "face throwing a kiss",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F619",
+    "name": "kissing face with smiling eyes",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F61A",
+    "name": "kissing face with closed eyes",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F61B",
+    "name": "face with stuck-out tongue",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F61C",
+    "name": "face with stuck-out tongue and winking eye",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F61D",
+    "name": "face with stuck-out tongue and tightly-closed eyes",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F61E",
+    "name": "disappointed face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F61F",
+    "name": "worried face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F620",
+    "name": "angry face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F621",
+    "name": "pouting face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F622",
+    "name": "crying face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F623",
+    "name": "persevering face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F624",
+    "name": "face with look of triumph",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F625",
+    "name": "disappointed but relieved face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F626",
+    "name": "frowning face with open mouth",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F627",
+    "name": "anguished face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F628",
+    "name": "fearful face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F629",
+    "name": "weary face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F62A",
+    "name": "sleepy face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F62B",
+    "name": "tired face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F62C",
+    "name": "grimacing face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F62D",
+    "name": "loudly crying face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F62E",
+    "name": "face with open mouth",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F62F",
+    "name": "hushed face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F630",
+    "name": "face with open mouth and cold sweat",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F631",
+    "name": "face screaming in fear",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F632",
+    "name": "astonished face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F633",
+    "name": "flushed face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F634",
+    "name": "sleeping face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F635",
+    "name": "dizzy face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F636",
+    "name": "face without mouth",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F637",
+    "name": "face with medical mask",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F638",
+    "name": "grinning cat face with smiling eyes",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F639",
+    "name": "cat face with tears of joy",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F63A",
+    "name": "smiling cat face with open mouth",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F63B",
+    "name": "smiling cat face with heart-shaped eyes",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F63C",
+    "name": "cat face with wry smile",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F63D",
+    "name": "kissing cat face with closed eyes",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F63E",
+    "name": "pouting cat face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F63F",
+    "name": "crying cat face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F640",
+    "name": "weary cat face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F641",
+    "name": "slightly frowning face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F642",
+    "name": "slightly smiling face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F643",
+    "name": "upside-down face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F644",
+    "name": "face with rolling eyes",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F648",
+    "name": "see-no-evil monkey",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F649",
+    "name": "hear-no-evil monkey",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F64A",
+    "name": "speak-no-evil monkey",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "2620-FE0F",
+    "name": "skull and crossbones",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "2639-FE0F",
+    "name": "frowning face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "263A-FE0F",
+    "name": "white smiling face",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "2763-FE0F",
+    "name": "heart exclamation",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "2764-FE0F",
+    "name": "heavy black heart",
+    "category": "Smileys & Emotion"
+  },
+  {
+    "unified": "1F385",
+    "name": "father christmas",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F3C2",
+    "name": "snowboarder",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F3C3",
+    "name": "runner",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F3C4",
+    "name": "surfer",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F3C7",
+    "name": "horse racing",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F3CA",
+    "name": "swimmer",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F3CB-FE0F",
+    "name": "person lifting weights",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F3CC-FE0F",
+    "name": "person golfing",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F440",
+    "name": "eyes",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F441-FE0F",
+    "name": "eye",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F442",
+    "name": "ear",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F443",
+    "name": "nose",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F444",
+    "name": "mouth",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F445",
+    "name": "tongue",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F446",
+    "name": "white up pointing backhand index",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F447",
+    "name": "white down pointing backhand index",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F448",
+    "name": "white left pointing backhand index",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F449",
+    "name": "white right pointing backhand index",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F44A",
+    "name": "fisted hand sign",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F44B",
+    "name": "waving hand sign",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F44C",
+    "name": "ok hand sign",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F44D",
+    "name": "thumbs up sign",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F44E",
+    "name": "thumbs down sign",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F44F",
+    "name": "clapping hands sign",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F450",
+    "name": "open hands sign",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F463",
+    "name": "footprints",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F464",
+    "name": "bust in silhouette",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F465",
+    "name": "busts in silhouette",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F466",
+    "name": "boy",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F467",
+    "name": "girl",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F468",
+    "name": "man",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F469",
+    "name": "woman",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F46A",
+    "name": "family",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F46B",
+    "name": "man and woman holding hands",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F46C",
+    "name": "two men holding hands",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F46D",
+    "name": "two women holding hands",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F46E",
+    "name": "police officer",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F46F",
+    "name": "woman with bunny ears",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F470",
+    "name": "bride with veil",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F471",
+    "name": "person with blond hair",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F472",
+    "name": "man with gua pi mao",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F473",
+    "name": "man with turban",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F474",
+    "name": "older man",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F475",
+    "name": "older woman",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F476",
+    "name": "baby",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F477",
+    "name": "construction worker",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F478",
+    "name": "princess",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F47C",
+    "name": "baby angel",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F481",
+    "name": "information desk person",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F482",
+    "name": "guardsman",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F483",
+    "name": "dancer",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F485",
+    "name": "nail polish",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F486",
+    "name": "face massage",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F487",
+    "name": "haircut",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F48F",
+    "name": "kiss",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F491",
+    "name": "couple with heart",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F4AA",
+    "name": "flexed biceps",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F574-FE0F",
+    "name": "person in suit levitating",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F575-FE0F",
+    "name": "detective",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F57A",
+    "name": "man dancing",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F590-FE0F",
+    "name": "hand with fingers splayed",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F595",
+    "name": "reversed hand with middle finger extended",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F596",
+    "name": "raised hand with part between middle and ring fingers",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F5E3-FE0F",
+    "name": "speaking head",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F645",
+    "name": "face with no good gesture",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F646",
+    "name": "face with ok gesture",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F647",
+    "name": "person bowing deeply",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F64B",
+    "name": "happy person raising one hand",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F64C",
+    "name": "person raising both hands in celebration",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F64D",
+    "name": "person frowning",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F64E",
+    "name": "person with pouting face",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F64F",
+    "name": "person with folded hands",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F6A3",
+    "name": "rowboat",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F6B4",
+    "name": "bicyclist",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F6B5",
+    "name": "mountain bicyclist",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F6B6",
+    "name": "pedestrian",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F6C0",
+    "name": "bath",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F6CC",
+    "name": "sleeping accommodation",
+    "category": "People & Body"
+  },
+  {
+    "unified": "261D-FE0F",
+    "name": "white up pointing index",
+    "category": "People & Body"
+  },
+  {
+    "unified": "26F7-FE0F",
+    "name": "skier",
+    "category": "People & Body"
+  },
+  {
+    "unified": "26F9-FE0F",
+    "name": "person bouncing ball",
+    "category": "People & Body"
+  },
+  {
+    "unified": "270A",
+    "name": "raised fist",
+    "category": "People & Body"
+  },
+  {
+    "unified": "270B",
+    "name": "raised hand",
+    "category": "People & Body"
+  },
+  {
+    "unified": "270C-FE0F",
+    "name": "victory hand",
+    "category": "People & Body"
+  },
+  {
+    "unified": "270D-FE0F",
+    "name": "writing hand",
+    "category": "People & Body"
+  },
+  {
+    "unified": "1F331",
+    "name": "seedling",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F332",
+    "name": "evergreen tree",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F333",
+    "name": "deciduous tree",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F334",
+    "name": "palm tree",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F335",
+    "name": "cactus",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F337",
+    "name": "tulip",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F338",
+    "name": "cherry blossom",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F339",
+    "name": "rose",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F33A",
+    "name": "hibiscus",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F33B",
+    "name": "sunflower",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F33C",
+    "name": "blossom",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F33E",
+    "name": "ear of rice",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F33F",
+    "name": "herb",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F340",
+    "name": "four leaf clover",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F341",
+    "name": "maple leaf",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F342",
+    "name": "fallen leaf",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F343",
+    "name": "leaf fluttering in wind",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F344",
+    "name": "mushroom",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F3F5-FE0F",
+    "name": "rosette",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F400",
+    "name": "rat",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F401",
+    "name": "mouse",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F402",
+    "name": "ox",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F403",
+    "name": "water buffalo",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F404",
+    "name": "cow",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F405",
+    "name": "tiger",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F406",
+    "name": "leopard",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F407",
+    "name": "rabbit",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F408",
+    "name": "cat",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F409",
+    "name": "dragon",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F40A",
+    "name": "crocodile",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F40B",
+    "name": "whale",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F40C",
+    "name": "snail",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F40D",
+    "name": "snake",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F40E",
+    "name": "horse",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F40F",
+    "name": "ram",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F410",
+    "name": "goat",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F411",
+    "name": "sheep",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F412",
+    "name": "monkey",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F413",
+    "name": "rooster",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F414",
+    "name": "chicken",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F415",
+    "name": "dog",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F416",
+    "name": "pig",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F417",
+    "name": "boar",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F418",
+    "name": "elephant",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F419",
+    "name": "octopus",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F41A",
+    "name": "spiral shell",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F41B",
+    "name": "bug",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F41C",
+    "name": "ant",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F41D",
+    "name": "honeybee",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F41E",
+    "name": "lady beetle",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F41F",
+    "name": "fish",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F420",
+    "name": "tropical fish",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F421",
+    "name": "blowfish",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F422",
+    "name": "turtle",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F423",
+    "name": "hatching chick",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F424",
+    "name": "baby chick",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F425",
+    "name": "front-facing baby chick",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F426",
+    "name": "bird",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F427",
+    "name": "penguin",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F428",
+    "name": "koala",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F429",
+    "name": "poodle",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F42A",
+    "name": "dromedary camel",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F42B",
+    "name": "bactrian camel",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F42C",
+    "name": "dolphin",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F42D",
+    "name": "mouse face",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F42E",
+    "name": "cow face",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F42F",
+    "name": "tiger face",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F430",
+    "name": "rabbit face",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F431",
+    "name": "cat face",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F432",
+    "name": "dragon face",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F433",
+    "name": "spouting whale",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F434",
+    "name": "horse face",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F435",
+    "name": "monkey face",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F436",
+    "name": "dog face",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F437",
+    "name": "pig face",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F438",
+    "name": "frog face",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F439",
+    "name": "hamster face",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F43A",
+    "name": "wolf face",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F43B",
+    "name": "bear face",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F43C",
+    "name": "panda face",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F43D",
+    "name": "pig nose",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F43E",
+    "name": "paw prints",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F43F-FE0F",
+    "name": "chipmunk",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F490",
+    "name": "bouquet",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F4AE",
+    "name": "white flower",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F54A-FE0F",
+    "name": "dove",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F577-FE0F",
+    "name": "spider",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F578-FE0F",
+    "name": "spider web",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "2618-FE0F",
+    "name": "shamrock",
+    "category": "Animals & Nature"
+  },
+  {
+    "unified": "1F32D",
+    "name": "hot dog",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F32E",
+    "name": "taco",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F32F",
+    "name": "burrito",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F330",
+    "name": "chestnut",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F336-FE0F",
+    "name": "hot pepper",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F33D",
+    "name": "ear of maize",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F345",
+    "name": "tomato",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F346",
+    "name": "aubergine",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F347",
+    "name": "grapes",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F348",
+    "name": "melon",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F349",
+    "name": "watermelon",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F34A",
+    "name": "tangerine",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F34B",
+    "name": "lemon",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F34C",
+    "name": "banana",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F34D",
+    "name": "pineapple",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F34E",
+    "name": "red apple",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F34F",
+    "name": "green apple",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F350",
+    "name": "pear",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F351",
+    "name": "peach",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F352",
+    "name": "cherries",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F353",
+    "name": "strawberry",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F354",
+    "name": "hamburger",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F355",
+    "name": "slice of pizza",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F356",
+    "name": "meat on bone",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F357",
+    "name": "poultry leg",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F358",
+    "name": "rice cracker",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F359",
+    "name": "rice ball",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F35A",
+    "name": "cooked rice",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F35B",
+    "name": "curry and rice",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F35C",
+    "name": "steaming bowl",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F35D",
+    "name": "spaghetti",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F35E",
+    "name": "bread",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F35F",
+    "name": "french fries",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F360",
+    "name": "roasted sweet potato",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F361",
+    "name": "dango",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F362",
+    "name": "oden",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F363",
+    "name": "sushi",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F364",
+    "name": "fried shrimp",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F365",
+    "name": "fish cake with swirl design",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F366",
+    "name": "soft ice cream",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F367",
+    "name": "shaved ice",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F368",
+    "name": "ice cream",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F369",
+    "name": "doughnut",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F36A",
+    "name": "cookie",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F36B",
+    "name": "chocolate bar",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F36C",
+    "name": "candy",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F36D",
+    "name": "lollipop",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F36E",
+    "name": "custard",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F36F",
+    "name": "honey pot",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F370",
+    "name": "shortcake",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F371",
+    "name": "bento box",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F372",
+    "name": "pot of food",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F373",
+    "name": "cooking",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F374",
+    "name": "fork and knife",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F375",
+    "name": "teacup without handle",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F376",
+    "name": "sake bottle and cup",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F377",
+    "name": "wine glass",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F378",
+    "name": "cocktail glass",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F379",
+    "name": "tropical drink",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F37A",
+    "name": "beer mug",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F37B",
+    "name": "clinking beer mugs",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F37C",
+    "name": "baby bottle",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F37D-FE0F",
+    "name": "fork and knife with plate",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F37E",
+    "name": "bottle with popping cork",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F37F",
+    "name": "popcorn",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F382",
+    "name": "birthday cake",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F3FA",
+    "name": "amphora",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F52A",
+    "name": "hocho",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "2615",
+    "name": "hot beverage",
+    "category": "Food & Drink"
+  },
+  {
+    "unified": "1F300",
+    "name": "cyclone",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F301",
+    "name": "foggy",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F302",
+    "name": "closed umbrella",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F303",
+    "name": "night with stars",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F304",
+    "name": "sunrise over mountains",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F305",
+    "name": "sunrise",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F306",
+    "name": "cityscape at dusk",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F307",
+    "name": "sunset over buildings",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F308",
+    "name": "rainbow",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F309",
+    "name": "bridge at night",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F30A",
+    "name": "water wave",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F30B",
+    "name": "volcano",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F30C",
+    "name": "milky way",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F30D",
+    "name": "earth globe europe-africa",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F30E",
+    "name": "earth globe americas",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F30F",
+    "name": "earth globe asia-australia",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F310",
+    "name": "globe with meridians",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F311",
+    "name": "new moon symbol",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F312",
+    "name": "waxing crescent moon symbol",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F313",
+    "name": "first quarter moon symbol",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F314",
+    "name": "waxing gibbous moon symbol",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F315",
+    "name": "full moon symbol",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F316",
+    "name": "waning gibbous moon symbol",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F317",
+    "name": "last quarter moon symbol",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F318",
+    "name": "waning crescent moon symbol",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F319",
+    "name": "crescent moon",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F31A",
+    "name": "new moon with face",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F31B",
+    "name": "first quarter moon with face",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F31C",
+    "name": "last quarter moon with face",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F31D",
+    "name": "full moon with face",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F31E",
+    "name": "sun with face",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F31F",
+    "name": "glowing star",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F320",
+    "name": "shooting star",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F321-FE0F",
+    "name": "thermometer",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F324-FE0F",
+    "name": "sun behind small cloud",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F325-FE0F",
+    "name": "sun behind large cloud",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F326-FE0F",
+    "name": "sun behind rain cloud",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F327-FE0F",
+    "name": "cloud with rain",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F328-FE0F",
+    "name": "cloud with snow",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F329-FE0F",
+    "name": "cloud with lightning",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F32A-FE0F",
+    "name": "tornado",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F32B-FE0F",
+    "name": "fog",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F32C-FE0F",
+    "name": "wind face",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3A0",
+    "name": "carousel horse",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3A1",
+    "name": "ferris wheel",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3A2",
+    "name": "roller coaster",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3AA",
+    "name": "circus tent",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3CD-FE0F",
+    "name": "motorcycle",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3CE-FE0F",
+    "name": "racing car",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3D4-FE0F",
+    "name": "snow-capped mountain",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3D5-FE0F",
+    "name": "camping",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3D6-FE0F",
+    "name": "beach with umbrella",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3D7-FE0F",
+    "name": "building construction",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3D8-FE0F",
+    "name": "houses",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3D9-FE0F",
+    "name": "cityscape",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3DA-FE0F",
+    "name": "derelict house",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3DB-FE0F",
+    "name": "classical building",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3DC-FE0F",
+    "name": "desert",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3DD-FE0F",
+    "name": "desert island",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3DE-FE0F",
+    "name": "national park",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3DF-FE0F",
+    "name": "stadium",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3E0",
+    "name": "house building",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3E1",
+    "name": "house with garden",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3E2",
+    "name": "office building",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3E3",
+    "name": "japanese post office",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3E4",
+    "name": "european post office",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3E5",
+    "name": "hospital",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3E6",
+    "name": "bank",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3E8",
+    "name": "hotel",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3E9",
+    "name": "love hotel",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3EA",
+    "name": "convenience store",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3EB",
+    "name": "school",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3EC",
+    "name": "department store",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3ED",
+    "name": "factory",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3EF",
+    "name": "japanese castle",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F3F0",
+    "name": "european castle",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F488",
+    "name": "barber pole",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F492",
+    "name": "wedding",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F4A7",
+    "name": "droplet",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F4BA",
+    "name": "seat",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F525",
+    "name": "fire",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F54B",
+    "name": "kaaba",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F54C",
+    "name": "mosque",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F54D",
+    "name": "synagogue",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F550",
+    "name": "clock face one oclock",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F551",
+    "name": "clock face two oclock",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F552",
+    "name": "clock face three oclock",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F553",
+    "name": "clock face four oclock",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F554",
+    "name": "clock face five oclock",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F555",
+    "name": "clock face six oclock",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F556",
+    "name": "clock face seven oclock",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F557",
+    "name": "clock face eight oclock",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F558",
+    "name": "clock face nine oclock",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F559",
+    "name": "clock face ten oclock",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F55A",
+    "name": "clock face eleven oclock",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F55B",
+    "name": "clock face twelve oclock",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F55C",
+    "name": "clock face one-thirty",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F55D",
+    "name": "clock face two-thirty",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F55E",
+    "name": "clock face three-thirty",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F55F",
+    "name": "clock face four-thirty",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F560",
+    "name": "clock face five-thirty",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F561",
+    "name": "clock face six-thirty",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F562",
+    "name": "clock face seven-thirty",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F563",
+    "name": "clock face eight-thirty",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F564",
+    "name": "clock face nine-thirty",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F565",
+    "name": "clock face ten-thirty",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F566",
+    "name": "clock face eleven-thirty",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F567",
+    "name": "clock face twelve-thirty",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F570-FE0F",
+    "name": "mantelpiece clock",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F5FA-FE0F",
+    "name": "world map",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F5FB",
+    "name": "mount fuji",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F5FC",
+    "name": "tokyo tower",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F5FD",
+    "name": "statue of liberty",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F5FE",
+    "name": "silhouette of japan",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F680",
+    "name": "rocket",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F681",
+    "name": "helicopter",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F682",
+    "name": "steam locomotive",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F683",
+    "name": "railway car",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F684",
+    "name": "high-speed train",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F685",
+    "name": "high-speed train with bullet nose",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F686",
+    "name": "train",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F687",
+    "name": "metro",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F688",
+    "name": "light rail",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F689",
+    "name": "station",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F68A",
+    "name": "tram",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F68B",
+    "name": "tram car",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F68C",
+    "name": "bus",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F68D",
+    "name": "oncoming bus",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F68E",
+    "name": "trolleybus",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F68F",
+    "name": "bus stop",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F690",
+    "name": "minibus",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F691",
+    "name": "ambulance",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F692",
+    "name": "fire engine",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F693",
+    "name": "police car",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F694",
+    "name": "oncoming police car",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F695",
+    "name": "taxi",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F696",
+    "name": "oncoming taxi",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F697",
+    "name": "automobile",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F698",
+    "name": "oncoming automobile",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F699",
+    "name": "recreational vehicle",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F69A",
+    "name": "delivery truck",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F69B",
+    "name": "articulated lorry",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F69C",
+    "name": "tractor",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F69D",
+    "name": "monorail",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F69E",
+    "name": "mountain railway",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F69F",
+    "name": "suspension railway",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F6A0",
+    "name": "mountain cableway",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F6A1",
+    "name": "aerial tramway",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F6A2",
+    "name": "ship",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F6A4",
+    "name": "speedboat",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F6A5",
+    "name": "horizontal traffic light",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F6A6",
+    "name": "vertical traffic light",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F6A7",
+    "name": "construction sign",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F6A8",
+    "name": "police cars revolving light",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F6B2",
+    "name": "bicycle",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F6CE-FE0F",
+    "name": "bellhop bell",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F6D1",
+    "name": "octagonal sign",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F6E2-FE0F",
+    "name": "oil drum",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F6E3-FE0F",
+    "name": "motorway",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F6E4-FE0F",
+    "name": "railway track",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F6E5-FE0F",
+    "name": "motor boat",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F6E9-FE0F",
+    "name": "small airplane",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F6EB",
+    "name": "airplane departure",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F6EC",
+    "name": "airplane arriving",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F6F0-FE0F",
+    "name": "satellite",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F6F3-FE0F",
+    "name": "passenger ship",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F6F4",
+    "name": "scooter",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F6F5",
+    "name": "motor scooter",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F6F6",
+    "name": "canoe",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F6F8",
+    "name": "flying saucer",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F6F9",
+    "name": "skateboard",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "231A",
+    "name": "watch",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "231B",
+    "name": "hourglass",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "23F0",
+    "name": "alarm clock",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "23F1-FE0F",
+    "name": "stopwatch",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "23F2-FE0F",
+    "name": "timer clock",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "23F3",
+    "name": "hourglass with flowing sand",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "2600-FE0F",
+    "name": "black sun with rays",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "2601-FE0F",
+    "name": "cloud",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "2602-FE0F",
+    "name": "umbrella",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "2603-FE0F",
+    "name": "snowman",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "2604-FE0F",
+    "name": "comet",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "2614",
+    "name": "umbrella with rain drops",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "2668-FE0F",
+    "name": "hot springs",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "2693",
+    "name": "anchor",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "26A1",
+    "name": "high voltage sign",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "26C4",
+    "name": "snowman without snow",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "26C5",
+    "name": "sun behind cloud",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "26C8-FE0F",
+    "name": "cloud with lightning and rain",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "26E9-FE0F",
+    "name": "shinto shrine",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "26EA",
+    "name": "church",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "26F0-FE0F",
+    "name": "mountain",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "26F1-FE0F",
+    "name": "umbrella on ground",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "26F2",
+    "name": "fountain",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "26F4-FE0F",
+    "name": "ferry",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "26F5",
+    "name": "sailboat",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "26FA",
+    "name": "tent",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "26FD",
+    "name": "fuel pump",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "2708-FE0F",
+    "name": "airplane",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "2744-FE0F",
+    "name": "snowflake",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "2B50",
+    "name": "white medium star",
+    "category": "Travel & Places"
+  },
+  {
+    "unified": "1F004",
+    "name": "mahjong tile red dragon",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F0CF",
+    "name": "playing card black joker",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F380",
+    "name": "ribbon",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F381",
+    "name": "wrapped present",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F383",
+    "name": "jack-o-lantern",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F384",
+    "name": "christmas tree",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F386",
+    "name": "fireworks",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F387",
+    "name": "firework sparkler",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F388",
+    "name": "balloon",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F389",
+    "name": "party popper",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F38A",
+    "name": "confetti ball",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F38B",
+    "name": "tanabata tree",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F38D",
+    "name": "pine decoration",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F38E",
+    "name": "japanese dolls",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F38F",
+    "name": "carp streamer",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F390",
+    "name": "wind chime",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F391",
+    "name": "moon viewing ceremony",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F396-FE0F",
+    "name": "military medal",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F397-FE0F",
+    "name": "reminder ribbon",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F39F-FE0F",
+    "name": "admission tickets",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F3A3",
+    "name": "fishing pole and fish",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F3A8",
+    "name": "artist palette",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F3AB",
+    "name": "ticket",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F3AD",
+    "name": "performing arts",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F3AE",
+    "name": "video game",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F3AF",
+    "name": "direct hit",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F3B0",
+    "name": "slot machine",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F3B1",
+    "name": "billiards",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F3B2",
+    "name": "game die",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F3B3",
+    "name": "bowling",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F3B4",
+    "name": "flower playing cards",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F3BD",
+    "name": "running shirt with sash",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F3BE",
+    "name": "tennis racquet and ball",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F3BF",
+    "name": "ski and ski boot",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F3C0",
+    "name": "basketball and hoop",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F3C5",
+    "name": "sports medal",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F3C6",
+    "name": "trophy",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F3C8",
+    "name": "american football",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F3C9",
+    "name": "rugby football",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F3CF",
+    "name": "cricket bat and ball",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F3D0",
+    "name": "volleyball",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F3D1",
+    "name": "field hockey stick and ball",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F3D2",
+    "name": "ice hockey stick and puck",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F3D3",
+    "name": "table tennis paddle and ball",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F3F8",
+    "name": "badminton racquet and shuttlecock",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F52B",
+    "name": "pistol",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F52E",
+    "name": "crystal ball",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F579-FE0F",
+    "name": "joystick",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F5BC-FE0F",
+    "name": "framed picture",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F6F7",
+    "name": "sled",
+    "category": "Activities"
+  },
+  {
+    "unified": "265F-FE0F",
+    "name": "chess pawn",
+    "category": "Activities"
+  },
+  {
+    "unified": "2660-FE0F",
+    "name": "black spade suit",
+    "category": "Activities"
+  },
+  {
+    "unified": "2663-FE0F",
+    "name": "black club suit",
+    "category": "Activities"
+  },
+  {
+    "unified": "2665-FE0F",
+    "name": "black heart suit",
+    "category": "Activities"
+  },
+  {
+    "unified": "2666-FE0F",
+    "name": "black diamond suit",
+    "category": "Activities"
+  },
+  {
+    "unified": "26BD",
+    "name": "soccer ball",
+    "category": "Activities"
+  },
+  {
+    "unified": "26BE",
+    "name": "baseball",
+    "category": "Activities"
+  },
+  {
+    "unified": "26F3",
+    "name": "flag in hole",
+    "category": "Activities"
+  },
+  {
+    "unified": "26F8-FE0F",
+    "name": "ice skate",
+    "category": "Activities"
+  },
+  {
+    "unified": "2728",
+    "name": "sparkles",
+    "category": "Activities"
+  },
+  {
+    "unified": "1F392",
+    "name": "school satchel",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F393",
+    "name": "graduation cap",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F399-FE0F",
+    "name": "studio microphone",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F39A-FE0F",
+    "name": "level slider",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F39B-FE0F",
+    "name": "control knobs",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F39E-FE0F",
+    "name": "film frames",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F3A4",
+    "name": "microphone",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F3A5",
+    "name": "movie camera",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F3A7",
+    "name": "headphone",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F3A9",
+    "name": "top hat",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F3AC",
+    "name": "clapper board",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F3B5",
+    "name": "musical note",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F3B6",
+    "name": "multiple musical notes",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F3B7",
+    "name": "saxophone",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F3B8",
+    "name": "guitar",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F3B9",
+    "name": "musical keyboard",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F3BA",
+    "name": "trumpet",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F3BB",
+    "name": "violin",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F3BC",
+    "name": "musical score",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F3EE",
+    "name": "izakaya lantern",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F3F7-FE0F",
+    "name": "label",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F3F9",
+    "name": "bow and arrow",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F451",
+    "name": "crown",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F452",
+    "name": "womans hat",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F453",
+    "name": "eyeglasses",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F454",
+    "name": "necktie",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F455",
+    "name": "t-shirt",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F456",
+    "name": "jeans",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F457",
+    "name": "dress",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F458",
+    "name": "kimono",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F459",
+    "name": "bikini",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F45A",
+    "name": "womans clothes",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F45B",
+    "name": "purse",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F45C",
+    "name": "handbag",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F45D",
+    "name": "pouch",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F45E",
+    "name": "mans shoe",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F45F",
+    "name": "athletic shoe",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F460",
+    "name": "high-heeled shoe",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F461",
+    "name": "womans sandal",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F462",
+    "name": "womans boots",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F484",
+    "name": "lipstick",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F489",
+    "name": "syringe",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F48A",
+    "name": "pill",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F48D",
+    "name": "ring",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F48E",
+    "name": "gem stone",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4A1",
+    "name": "electric light bulb",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4A3",
+    "name": "bomb",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4B0",
+    "name": "money bag",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4B3",
+    "name": "credit card",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4B4",
+    "name": "banknote with yen sign",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4B5",
+    "name": "banknote with dollar sign",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4B6",
+    "name": "banknote with euro sign",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4B7",
+    "name": "banknote with pound sign",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4B8",
+    "name": "money with wings",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4B9",
+    "name": "chart with upwards trend and yen sign",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4BB",
+    "name": "personal computer",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4BC",
+    "name": "briefcase",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4BD",
+    "name": "minidisc",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4BE",
+    "name": "floppy disk",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4BF",
+    "name": "optical disc",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4C0",
+    "name": "dvd",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4C1",
+    "name": "file folder",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4C2",
+    "name": "open file folder",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4C3",
+    "name": "page with curl",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4C4",
+    "name": "page facing up",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4C5",
+    "name": "calendar",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4C6",
+    "name": "tear-off calendar",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4C7",
+    "name": "card index",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4C8",
+    "name": "chart with upwards trend",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4C9",
+    "name": "chart with downwards trend",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4CA",
+    "name": "bar chart",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4CB",
+    "name": "clipboard",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4CC",
+    "name": "pushpin",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4CD",
+    "name": "round pushpin",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4CE",
+    "name": "paperclip",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4CF",
+    "name": "straight ruler",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4D0",
+    "name": "triangular ruler",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4D1",
+    "name": "bookmark tabs",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4D2",
+    "name": "ledger",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4D3",
+    "name": "notebook",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4D4",
+    "name": "notebook with decorative cover",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4D5",
+    "name": "closed book",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4D6",
+    "name": "open book",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4D7",
+    "name": "green book",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4D8",
+    "name": "blue book",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4D9",
+    "name": "orange book",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4DA",
+    "name": "books",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4DC",
+    "name": "scroll",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4DD",
+    "name": "memo",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4DE",
+    "name": "telephone receiver",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4DF",
+    "name": "pager",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4E0",
+    "name": "fax machine",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4E1",
+    "name": "satellite antenna",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4E2",
+    "name": "public address loudspeaker",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4E3",
+    "name": "cheering megaphone",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4E4",
+    "name": "outbox tray",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4E5",
+    "name": "inbox tray",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4E6",
+    "name": "package",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4E7",
+    "name": "e-mail symbol",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4E8",
+    "name": "incoming envelope",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4E9",
+    "name": "envelope with downwards arrow above",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4EA",
+    "name": "closed mailbox with lowered flag",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4EB",
+    "name": "closed mailbox with raised flag",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4EC",
+    "name": "open mailbox with raised flag",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4ED",
+    "name": "open mailbox with lowered flag",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4EE",
+    "name": "postbox",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4EF",
+    "name": "postal horn",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4F0",
+    "name": "newspaper",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4F1",
+    "name": "mobile phone",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4F2",
+    "name": "mobile phone with rightwards arrow at left",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4F7",
+    "name": "camera",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4F8",
+    "name": "camera with flash",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4F9",
+    "name": "video camera",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4FA",
+    "name": "television",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4FB",
+    "name": "radio",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4FC",
+    "name": "videocassette",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4FD-FE0F",
+    "name": "film projector",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F4FF",
+    "name": "prayer beads",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F507",
+    "name": "speaker with cancellation stroke",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F508",
+    "name": "speaker",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F509",
+    "name": "speaker with one sound wave",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F50A",
+    "name": "speaker with three sound waves",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F50B",
+    "name": "battery",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F50C",
+    "name": "electric plug",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F50D",
+    "name": "left-pointing magnifying glass",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F50E",
+    "name": "right-pointing magnifying glass",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F50F",
+    "name": "lock with ink pen",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F510",
+    "name": "closed lock with key",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F511",
+    "name": "key",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F512",
+    "name": "lock",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F513",
+    "name": "open lock",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F514",
+    "name": "bell",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F515",
+    "name": "bell with cancellation stroke",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F516",
+    "name": "bookmark",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F517",
+    "name": "link symbol",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F526",
+    "name": "electric torch",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F527",
+    "name": "wrench",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F528",
+    "name": "hammer",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F529",
+    "name": "nut and bolt",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F52C",
+    "name": "microscope",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F52D",
+    "name": "telescope",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F56F-FE0F",
+    "name": "candle",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F576-FE0F",
+    "name": "sunglasses",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F587-FE0F",
+    "name": "linked paperclips",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F58A-FE0F",
+    "name": "pen",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F58B-FE0F",
+    "name": "fountain pen",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F58C-FE0F",
+    "name": "paintbrush",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F58D-FE0F",
+    "name": "crayon",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F5A5-FE0F",
+    "name": "desktop computer",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F5A8-FE0F",
+    "name": "printer",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F5B1-FE0F",
+    "name": "computer mouse",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F5B2-FE0F",
+    "name": "trackball",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F5C2-FE0F",
+    "name": "card index dividers",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F5C3-FE0F",
+    "name": "card file box",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F5C4-FE0F",
+    "name": "file cabinet",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F5D1-FE0F",
+    "name": "wastebasket",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F5D2-FE0F",
+    "name": "spiral notepad",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F5D3-FE0F",
+    "name": "spiral calendar",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F5DC-FE0F",
+    "name": "clamp",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F5DD-FE0F",
+    "name": "old key",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F5DE-FE0F",
+    "name": "rolled-up newspaper",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F5E1-FE0F",
+    "name": "dagger",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F5F3-FE0F",
+    "name": "ballot box with ballot",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F5FF",
+    "name": "moyai",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F6AA",
+    "name": "door",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F6AC",
+    "name": "smoking symbol",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F6BD",
+    "name": "toilet",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F6BF",
+    "name": "shower",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F6C1",
+    "name": "bathtub",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F6CB-FE0F",
+    "name": "couch and lamp",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F6CD-FE0F",
+    "name": "shopping bags",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F6CF-FE0F",
+    "name": "bed",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F6D2",
+    "name": "shopping trolley",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F6E0-FE0F",
+    "name": "hammer and wrench",
+    "category": "Objects"
+  },
+  {
+    "unified": "1F6E1-FE0F",
+    "name": "shield",
+    "category": "Objects"
+  },
+  {
+    "unified": "2328-FE0F",
+    "name": "keyboard",
+    "category": "Objects"
+  },
+  {
+    "unified": "260E-FE0F",
+    "name": "black telephone",
+    "category": "Objects"
+  },
+  {
+    "unified": "2692-FE0F",
+    "name": "hammer and pick",
+    "category": "Objects"
+  },
+  {
+    "unified": "2694-FE0F",
+    "name": "crossed swords",
+    "category": "Objects"
+  },
+  {
+    "unified": "2696-FE0F",
+    "name": "balance scale",
+    "category": "Objects"
+  },
+  {
+    "unified": "2697-FE0F",
+    "name": "alembic",
+    "category": "Objects"
+  },
+  {
+    "unified": "2699-FE0F",
+    "name": "gear",
+    "category": "Objects"
+  },
+  {
+    "unified": "26B0-FE0F",
+    "name": "coffin",
+    "category": "Objects"
+  },
+  {
+    "unified": "26B1-FE0F",
+    "name": "funeral urn",
+    "category": "Objects"
+  },
+  {
+    "unified": "26CF-FE0F",
+    "name": "pick",
+    "category": "Objects"
+  },
+  {
+    "unified": "26D1-FE0F",
+    "name": "rescue worker’s helmet",
+    "category": "Objects"
+  },
+  {
+    "unified": "26D3-FE0F",
+    "name": "chains",
+    "category": "Objects"
+  },
+  {
+    "unified": "2702-FE0F",
+    "name": "black scissors",
+    "category": "Objects"
+  },
+  {
+    "unified": "2709-FE0F",
+    "name": "envelope",
+    "category": "Objects"
+  },
+  {
+    "unified": "270F-FE0F",
+    "name": "pencil",
+    "category": "Objects"
+  },
+  {
+    "unified": "2712-FE0F",
+    "name": "black nib",
+    "category": "Objects"
+  },
+  {
+    "unified": "0023-FE0F-20E3",
+    "name": "hash key",
+    "category": "Symbols"
+  },
+  {
+    "unified": "002A-FE0F-20E3",
+    "name": "keycap: *",
+    "category": "Symbols"
+  },
+  {
+    "unified": "0030-FE0F-20E3",
+    "name": "keycap 0",
+    "category": "Symbols"
+  },
+  {
+    "unified": "0031-FE0F-20E3",
+    "name": "keycap 1",
+    "category": "Symbols"
+  },
+  {
+    "unified": "0032-FE0F-20E3",
+    "name": "keycap 2",
+    "category": "Symbols"
+  },
+  {
+    "unified": "0033-FE0F-20E3",
+    "name": "keycap 3",
+    "category": "Symbols"
+  },
+  {
+    "unified": "0034-FE0F-20E3",
+    "name": "keycap 4",
+    "category": "Symbols"
+  },
+  {
+    "unified": "0035-FE0F-20E3",
+    "name": "keycap 5",
+    "category": "Symbols"
+  },
+  {
+    "unified": "0036-FE0F-20E3",
+    "name": "keycap 6",
+    "category": "Symbols"
+  },
+  {
+    "unified": "0037-FE0F-20E3",
+    "name": "keycap 7",
+    "category": "Symbols"
+  },
+  {
+    "unified": "0038-FE0F-20E3",
+    "name": "keycap 8",
+    "category": "Symbols"
+  },
+  {
+    "unified": "0039-FE0F-20E3",
+    "name": "keycap 9",
+    "category": "Symbols"
+  },
+  {
+    "unified": "00A9-FE0F",
+    "name": "copyright sign",
+    "category": "Symbols"
+  },
+  {
+    "unified": "00AE-FE0F",
+    "name": "registered sign",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F170-FE0F",
+    "name": "negative squared latin capital letter a",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F171-FE0F",
+    "name": "negative squared latin capital letter b",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F17E-FE0F",
+    "name": "negative squared latin capital letter o",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F17F-FE0F",
+    "name": "negative squared latin capital letter p",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F18E",
+    "name": "negative squared ab",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F191",
+    "name": "squared cl",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F192",
+    "name": "squared cool",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F193",
+    "name": "squared free",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F194",
+    "name": "squared id",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F195",
+    "name": "squared new",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F196",
+    "name": "squared ng",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F197",
+    "name": "squared ok",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F198",
+    "name": "squared sos",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F199",
+    "name": "squared up with exclamation mark",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F19A",
+    "name": "squared vs",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F201",
+    "name": "squared katakana koko",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F202-FE0F",
+    "name": "squared katakana sa",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F21A",
+    "name": "squared cjk unified ideograph-7121",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F22F",
+    "name": "squared cjk unified ideograph-6307",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F232",
+    "name": "squared cjk unified ideograph-7981",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F233",
+    "name": "squared cjk unified ideograph-7a7a",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F234",
+    "name": "squared cjk unified ideograph-5408",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F235",
+    "name": "squared cjk unified ideograph-6e80",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F236",
+    "name": "squared cjk unified ideograph-6709",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F237-FE0F",
+    "name": "squared cjk unified ideograph-6708",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F238",
+    "name": "squared cjk unified ideograph-7533",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F239",
+    "name": "squared cjk unified ideograph-5272",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F23A",
+    "name": "squared cjk unified ideograph-55b6",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F250",
+    "name": "circled ideograph advantage",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F251",
+    "name": "circled ideograph accept",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F3A6",
+    "name": "cinema",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F3E7",
+    "name": "automated teller machine",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F4A0",
+    "name": "diamond shape with a dot inside",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F4B1",
+    "name": "currency exchange",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F4B2",
+    "name": "heavy dollar sign",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F4DB",
+    "name": "name badge",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F4F3",
+    "name": "vibration mode",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F4F4",
+    "name": "mobile phone off",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F4F5",
+    "name": "no mobile phones",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F4F6",
+    "name": "antenna with bars",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F500",
+    "name": "twisted rightwards arrows",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F501",
+    "name": "clockwise rightwards and leftwards open circle arrows",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F502",
+    "name": "clockwise rightwards and leftwards open circle arrows with circled one overlay",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F503",
+    "name": "clockwise downwards and upwards open circle arrows",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F504",
+    "name": "anticlockwise downwards and upwards open circle arrows",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F505",
+    "name": "low brightness symbol",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F506",
+    "name": "high brightness symbol",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F518",
+    "name": "radio button",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F519",
+    "name": "back with leftwards arrow above",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F51A",
+    "name": "end with leftwards arrow above",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F51B",
+    "name": "on with exclamation mark with left right arrow above",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F51C",
+    "name": "soon with rightwards arrow above",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F51D",
+    "name": "top with upwards arrow above",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F51E",
+    "name": "no one under eighteen symbol",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F51F",
+    "name": "keycap ten",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F520",
+    "name": "input symbol for latin capital letters",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F521",
+    "name": "input symbol for latin small letters",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F522",
+    "name": "input symbol for numbers",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F523",
+    "name": "input symbol for symbols",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F524",
+    "name": "input symbol for latin letters",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F52F",
+    "name": "six pointed star with middle dot",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F530",
+    "name": "japanese symbol for beginner",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F531",
+    "name": "trident emblem",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F532",
+    "name": "black square button",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F533",
+    "name": "white square button",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F534",
+    "name": "large red circle",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F535",
+    "name": "large blue circle",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F536",
+    "name": "large orange diamond",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F537",
+    "name": "large blue diamond",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F538",
+    "name": "small orange diamond",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F539",
+    "name": "small blue diamond",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F53A",
+    "name": "up-pointing red triangle",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F53B",
+    "name": "down-pointing red triangle",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F53C",
+    "name": "up-pointing small red triangle",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F53D",
+    "name": "down-pointing small red triangle",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F549-FE0F",
+    "name": "om",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F54E",
+    "name": "menorah with nine branches",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F6AB",
+    "name": "no entry sign",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F6AD",
+    "name": "no smoking symbol",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F6AE",
+    "name": "put litter in its place symbol",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F6AF",
+    "name": "do not litter symbol",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F6B0",
+    "name": "potable water symbol",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F6B1",
+    "name": "non-potable water symbol",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F6B3",
+    "name": "no bicycles",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F6B7",
+    "name": "no pedestrians",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F6B8",
+    "name": "children crossing",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F6B9",
+    "name": "mens symbol",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F6BA",
+    "name": "womens symbol",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F6BB",
+    "name": "restroom",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F6BC",
+    "name": "baby symbol",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F6BE",
+    "name": "water closet",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F6C2",
+    "name": "passport control",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F6C3",
+    "name": "customs",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F6C4",
+    "name": "baggage claim",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F6C5",
+    "name": "left luggage",
+    "category": "Symbols"
+  },
+  {
+    "unified": "1F6D0",
+    "name": "place of worship",
+    "category": "Symbols"
+  },
+  {
+    "unified": "203C-FE0F",
+    "name": "double exclamation mark",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2049-FE0F",
+    "name": "exclamation question mark",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2122-FE0F",
+    "name": "trade mark sign",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2139-FE0F",
+    "name": "information source",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2194-FE0F",
+    "name": "left right arrow",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2195-FE0F",
+    "name": "up down arrow",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2196-FE0F",
+    "name": "north west arrow",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2197-FE0F",
+    "name": "north east arrow",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2198-FE0F",
+    "name": "south east arrow",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2199-FE0F",
+    "name": "south west arrow",
+    "category": "Symbols"
+  },
+  {
+    "unified": "21A9-FE0F",
+    "name": "leftwards arrow with hook",
+    "category": "Symbols"
+  },
+  {
+    "unified": "21AA-FE0F",
+    "name": "rightwards arrow with hook",
+    "category": "Symbols"
+  },
+  {
+    "unified": "23CF-FE0F",
+    "name": "eject button",
+    "category": "Symbols"
+  },
+  {
+    "unified": "23E9",
+    "name": "black right-pointing double triangle",
+    "category": "Symbols"
+  },
+  {
+    "unified": "23EA",
+    "name": "black left-pointing double triangle",
+    "category": "Symbols"
+  },
+  {
+    "unified": "23EB",
+    "name": "black up-pointing double triangle",
+    "category": "Symbols"
+  },
+  {
+    "unified": "23EC",
+    "name": "black down-pointing double triangle",
+    "category": "Symbols"
+  },
+  {
+    "unified": "23ED-FE0F",
+    "name": "next track button",
+    "category": "Symbols"
+  },
+  {
+    "unified": "23EE-FE0F",
+    "name": "last track button",
+    "category": "Symbols"
+  },
+  {
+    "unified": "23EF-FE0F",
+    "name": "play or pause button",
+    "category": "Symbols"
+  },
+  {
+    "unified": "23F8-FE0F",
+    "name": "pause button",
+    "category": "Symbols"
+  },
+  {
+    "unified": "23F9-FE0F",
+    "name": "stop button",
+    "category": "Symbols"
+  },
+  {
+    "unified": "23FA-FE0F",
+    "name": "record button",
+    "category": "Symbols"
+  },
+  {
+    "unified": "24C2-FE0F",
+    "name": "circled latin capital letter m",
+    "category": "Symbols"
+  },
+  {
+    "unified": "25AA-FE0F",
+    "name": "black small square",
+    "category": "Symbols"
+  },
+  {
+    "unified": "25AB-FE0F",
+    "name": "white small square",
+    "category": "Symbols"
+  },
+  {
+    "unified": "25B6-FE0F",
+    "name": "black right-pointing triangle",
+    "category": "Symbols"
+  },
+  {
+    "unified": "25C0-FE0F",
+    "name": "black left-pointing triangle",
+    "category": "Symbols"
+  },
+  {
+    "unified": "25FB-FE0F",
+    "name": "white medium square",
+    "category": "Symbols"
+  },
+  {
+    "unified": "25FC-FE0F",
+    "name": "black medium square",
+    "category": "Symbols"
+  },
+  {
+    "unified": "25FD",
+    "name": "white medium small square",
+    "category": "Symbols"
+  },
+  {
+    "unified": "25FE",
+    "name": "black medium small square",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2611-FE0F",
+    "name": "ballot box with check",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2622-FE0F",
+    "name": "radioactive",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2623-FE0F",
+    "name": "biohazard",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2626-FE0F",
+    "name": "orthodox cross",
+    "category": "Symbols"
+  },
+  {
+    "unified": "262A-FE0F",
+    "name": "star and crescent",
+    "category": "Symbols"
+  },
+  {
+    "unified": "262E-FE0F",
+    "name": "peace symbol",
+    "category": "Symbols"
+  },
+  {
+    "unified": "262F-FE0F",
+    "name": "yin yang",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2638-FE0F",
+    "name": "wheel of dharma",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2640-FE0F",
+    "name": "female sign",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2642-FE0F",
+    "name": "male sign",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2648",
+    "name": "aries",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2649",
+    "name": "taurus",
+    "category": "Symbols"
+  },
+  {
+    "unified": "264A",
+    "name": "gemini",
+    "category": "Symbols"
+  },
+  {
+    "unified": "264B",
+    "name": "cancer",
+    "category": "Symbols"
+  },
+  {
+    "unified": "264C",
+    "name": "leo",
+    "category": "Symbols"
+  },
+  {
+    "unified": "264D",
+    "name": "virgo",
+    "category": "Symbols"
+  },
+  {
+    "unified": "264E",
+    "name": "libra",
+    "category": "Symbols"
+  },
+  {
+    "unified": "264F",
+    "name": "scorpius",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2650",
+    "name": "sagittarius",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2651",
+    "name": "capricorn",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2652",
+    "name": "aquarius",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2653",
+    "name": "pisces",
+    "category": "Symbols"
+  },
+  {
+    "unified": "267B-FE0F",
+    "name": "black universal recycling symbol",
+    "category": "Symbols"
+  },
+  {
+    "unified": "267E-FE0F",
+    "name": "infinity",
+    "category": "Symbols"
+  },
+  {
+    "unified": "267F",
+    "name": "wheelchair symbol",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2695-FE0F",
+    "name": "medical symbol",
+    "category": "Symbols"
+  },
+  {
+    "unified": "269B-FE0F",
+    "name": "atom symbol",
+    "category": "Symbols"
+  },
+  {
+    "unified": "269C-FE0F",
+    "name": "fleur-de-lis",
+    "category": "Symbols"
+  },
+  {
+    "unified": "26A0-FE0F",
+    "name": "warning sign",
+    "category": "Symbols"
+  },
+  {
+    "unified": "26AA",
+    "name": "medium white circle",
+    "category": "Symbols"
+  },
+  {
+    "unified": "26AB",
+    "name": "medium black circle",
+    "category": "Symbols"
+  },
+  {
+    "unified": "26CE",
+    "name": "ophiuchus",
+    "category": "Symbols"
+  },
+  {
+    "unified": "26D4",
+    "name": "no entry",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2705",
+    "name": "white heavy check mark",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2714-FE0F",
+    "name": "heavy check mark",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2716-FE0F",
+    "name": "heavy multiplication x",
+    "category": "Symbols"
+  },
+  {
+    "unified": "271D-FE0F",
+    "name": "latin cross",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2721-FE0F",
+    "name": "star of david",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2733-FE0F",
+    "name": "eight spoked asterisk",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2734-FE0F",
+    "name": "eight pointed black star",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2747-FE0F",
+    "name": "sparkle",
+    "category": "Symbols"
+  },
+  {
+    "unified": "274C",
+    "name": "cross mark",
+    "category": "Symbols"
+  },
+  {
+    "unified": "274E",
+    "name": "negative squared cross mark",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2753",
+    "name": "black question mark ornament",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2754",
+    "name": "white question mark ornament",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2755",
+    "name": "white exclamation mark ornament",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2757",
+    "name": "heavy exclamation mark symbol",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2795",
+    "name": "heavy plus sign",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2796",
+    "name": "heavy minus sign",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2797",
+    "name": "heavy division sign",
+    "category": "Symbols"
+  },
+  {
+    "unified": "27A1-FE0F",
+    "name": "black rightwards arrow",
+    "category": "Symbols"
+  },
+  {
+    "unified": "27B0",
+    "name": "curly loop",
+    "category": "Symbols"
+  },
+  {
+    "unified": "27BF",
+    "name": "double curly loop",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2934-FE0F",
+    "name": "arrow pointing rightwards then curving upwards",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2935-FE0F",
+    "name": "arrow pointing rightwards then curving downwards",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2B05-FE0F",
+    "name": "leftwards black arrow",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2B06-FE0F",
+    "name": "upwards black arrow",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2B07-FE0F",
+    "name": "downwards black arrow",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2B1B",
+    "name": "black large square",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2B1C",
+    "name": "white large square",
+    "category": "Symbols"
+  },
+  {
+    "unified": "2B55",
+    "name": "heavy large circle",
+    "category": "Symbols"
+  },
+  {
+    "unified": "3030-FE0F",
+    "name": "wavy dash",
+    "category": "Symbols"
+  },
+  {
+    "unified": "303D-FE0F",
+    "name": "part alternation mark",
+    "category": "Symbols"
+  },
+  {
+    "unified": "3297-FE0F",
+    "name": "circled ideograph congratulation",
+    "category": "Symbols"
+  },
+  {
+    "unified": "3299-FE0F",
+    "name": "circled ideograph secret",
+    "category": "Symbols"
+  }
+];
+
+    // Convert unified code points to emoji characters
+    const emojis = emojiData.map(emoji => ({
+      char: emoji.unified.split('-').map(u => String.fromCodePoint(parseInt(u, 16))).join(''),
+      name: emoji.name || 'unnamed',
+      category: emoji.category || 'Other'
+    }));
+
+    // Group emojis by category
+    const categories = {};
+    emojis.forEach(emoji => {
+      if (!categories[emoji.category]) {
+        categories[emoji.category] = [];
+      }
+      categories[emoji.category].push(emoji);
+    });
+
+    // Create category sections and emoji items
+    const emojiContainer = document.getElementById('emoji-container');
+    for (const category in categories) {
+      const categoryDiv = document.createElement('div');
+      categoryDiv.className = 'category';
+      const heading = document.createElement('h2');
+      heading.textContent = category;
+      categoryDiv.appendChild(heading);
+      const grid = document.createElement('div');
+      grid.className = 'emoji-grid';
+      categories[category].forEach(emoji => {
+        const item = document.createElement('div');
+        item.className = 'emoji-item';
+        item.textContent = emoji.char;
+        item.title = emoji.name; // Tooltip on hover
+        item.setAttribute('data-name', emoji.name);
+        item.addEventListener('click', () => {
+          navigator.clipboard.writeText(emoji.char).then(() => {
+            showToast(`Copied: ${emoji.char}`);
+          }).catch(err => {
+            console.error('Failed to copy:', err);
+            showToast('Copy failed');
+          });
+        });
+        grid.appendChild(item);
+      });
+      categoryDiv.appendChild(grid);
+      emojiContainer.appendChild(categoryDiv);
+    }
+
+    // Search functionality
+    const searchInput = document.getElementById('search');
+    searchInput.addEventListener('input', () => {
+      const term = searchInput.value.toLowerCase();
+      const emojiItems = document.querySelectorAll('.emoji-item');
+      emojiItems.forEach(item => {
+        const name = item.getAttribute('data-name').toLowerCase();
+        if (name.includes(term)) {
+          item.classList.remove('hidden');
+        } else {
+          item.classList.add('hidden');
+        }
+      });
+      const categorySections = document.querySelectorAll('.category');
+      categorySections.forEach(section => {
+        const items = section.querySelectorAll('.emoji-item');
+        const allHidden = Array.from(items).every(item => item.classList.contains('hidden'));
+        section.style.display = allHidden ? 'none' : 'block';
+      });
+    });
+
+    // Toast notification function
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.style.display = 'block';
+      setTimeout(() => {
+        toast.style.display = 'none';
+      }, 2000);
+    }
+  </script>
+</body>
+</html>
