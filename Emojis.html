@@ -5,38 +5,100 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Emoji Browser</title>
   <style>
+    /* Define CSS variables for theming */
+    :root {
+      --background-color: #f9f9f9; /* Light mode background */
+      --text-color: #333; /* Light mode text */
+      --container-bg: transparent; /* Light mode container */
+      --search-bg: #fff; /* Light mode search background */
+      --search-border: #ddd; /* Light mode search border */
+      --emoji-hover-bg: #f0f0f0; /* Light mode hover */
+      --toast-bg: #333; /* Toast background (same for both) */
+      --toast-text: #fff; /* Toast text (same for both) */
+    }
+
+    /* Dark mode variables */
+    [data-theme="dark"] {
+      --background-color: #1a1a1a; /* Dark mode background */
+      --text-color: #e0e0e0; /* Dark mode text */
+      --container-bg: #2a2a2a; /* Dark mode container */
+      --search-bg: #333; /* Dark mode search background */
+      --search-border: #555; /* Dark mode search border */
+      --emoji-hover-bg: #444; /* Dark mode hover */
+    }
+
     body {
       font-family: Arial, sans-serif;
-      background-color: #f9f9f9;
+      background-color: var(--background-color);
+      color: var(--text-color);
       margin: 0;
+      transition: background-color 0.3s, color 0.3s;
     }
+
     .container {
       max-width: 1200px;
       margin: 0 auto;
       padding: 20px;
+      background-color: var(--container-bg);
+      border-radius: 8px;
     }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    #theme-toggle {
+      background-color: var(--search-bg);
+      border: 1px solid var(--search-border);
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--text-color);
+      transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+    }
+
+    #theme-toggle:hover {
+      background-color: var(--emoji-hover-bg);
+    }
+
     #search {
       width: 100%;
       padding: 10px;
       margin-bottom: 20px;
       font-size: 16px;
-      border: 1px solid #ddd;
+      border: 1px solid var(--search-border);
       border-radius: 4px;
       box-sizing: border-box;
+      background-color: var(--search-bg);
+      color: var(--text-color);
+      transition: background-color 0.3s, border-color 0.3s, color 0.3s;
     }
+
+    #search::placeholder {
+      color: var(--text-color);
+      opacity: 0.6;
+    }
+
     .category {
       margin-bottom: 30px;
     }
+
     .category h2 {
       font-size: 24px;
       margin-bottom: 10px;
-      color: #333;
+      color: var(--text-color);
     }
+
     .emoji-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
       gap: 10px;
     }
+
     .emoji-item {
       display: flex;
       justify-content: center;
@@ -46,36 +108,47 @@
       height: 50px;
       border-radius: 4px;
       transition: background-color 0.2s;
+      font-family: 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif !important;
     }
+
     .emoji-item:hover {
-      background-color: #f0f0f0;
+      background-color: var(--emoji-hover-bg);
     }
+
     .hidden {
       display: none;
     }
+
     #toast {
       display: none;
       position: fixed;
       bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
-      background-color: #333;
-      color: #fff;
+      background-color: var(--toast-bg);
+      color: var(--toast-text);
       padding: 10px 20px;
       border-radius: 5px;
       z-index: 1000;
       font-size: 14px;
     }
+
+    /* Import Noto Color Emoji */
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap');
   </style>
 </head>
 <body>
   <div class="container">
+    <div class="header">
+      <h1>Emoji Browser</h1>
+      <button id="theme-toggle">Toggle Dark Mode</button>
+    </div>
     <input type="text" id="search" placeholder="Search emojis...">
     <div id="emoji-container"></div>
   </div>
   <div id="toast"></div>
   <script>
-    // Basic emoji dataset
+    // Your generated emojiData array (from emoji_data_output.js)
     const emojiData = [
   {
     "unified": "1F479",
@@ -5229,6 +5302,28 @@
       setTimeout(() => {
         toast.style.display = 'none';
       }, 2000);
+    }
+
+    // Dark mode toggle functionality
+    const themeToggle = document.getElementById('theme-toggle');
+    themeToggle.addEventListener('click', () => {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      if (currentTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'light');
+        themeToggle.textContent = 'Toggle Dark Mode';
+        localStorage.setItem('theme', 'light');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeToggle.textContent = 'Toggle Light Mode';
+        localStorage.setItem('theme', 'dark');
+      }
+    });
+
+    // Load saved theme from localStorage
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      themeToggle.textContent = savedTheme === 'dark' ? 'Toggle Light Mode' : 'Toggle Dark Mode';
     }
   </script>
 </body>
