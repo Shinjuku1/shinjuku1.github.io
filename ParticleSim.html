@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Particle Simulator (GPU)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #000000;
+            --surface-color: #1e1e1e;
+            --primary-text: #e0e0e0;
+            --secondary-text: #a0a0a0;
+            --accent-color: #4a90e2;
+            --divider-color: #333333;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: var(--bg-color);
+            color: var(--primary-text);
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            height: 100vh;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        #ui-toggle-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: var(--surface-color);
+            border: 1px solid var(--divider-color);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s ease, background-color 0.2s;
+            z-index: 1001;
+        }
+
+        #ui-toggle-button:hover {
+            transform: scale(1.1) rotate(15deg);
+            background-color: #2a2a2a;
+        }
+        
+        #ui-toggle-button svg {
+            width: 28px;
+            height: 28px;
+            fill: var(--primary-text);
+        }
+
+        #controls {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 380px;
+            height: 100%;
+            background: var(--surface-color);
+            box-shadow: -5px 0 25px rgba(0, 0, 0, 0.3);
+            transform: translateX(100%);
+            transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #controls.visible {
+            transform: translateX(0);
+        }
+        
+        .controls-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--divider-color);
+        }
+
+        .controls-header h2 {
+            margin: 0;
+            font-size: 1.5em;
+            text-align: center;
+            color: var(--primary-text);
+        }
+        
+        .controls-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .accordion-item {
+            border: 1px solid var(--divider-color);
+            border-radius: 8px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+
+        .accordion-header {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+        
+        .accordion-header h3 {
+            margin: 0;
+            font-weight: 500;
+            font-size: 1em;
+        }
+
+        .accordion-header .icon {
+            transition: transform 0.3s ease;
+        }
+        
+        .accordion-item.active .accordion-header .icon {
+            transform: rotate(180deg);
+        }
+
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+            padding: 0 15px;
+        }
+        
+        .accordion-item.active .accordion-content {
+           padding: 15px;
+        }
+
+        .control-container {
+            margin-bottom: 15px;
+        }
+
+        .control-container label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+            color: var(--secondary-text);
+        }
+        
+        .control-container label span:last-child {
+            color: var(--primary-text);
+            font-weight: 500;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 4px;
+            background: var(--divider-color);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent-color);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: var(--accent-color);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+        
+        input[type="range"]:hover::-webkit-slider-thumb {
+            background: #6aa8e9;
+        }
+
+        select, .button-group button, .control-button {
+            width: 100%;
+            background: #333;
+            border: 1px solid #444;
+            color: var(--primary-text);
+            padding: 10px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        
+        select:hover, .button-group button:hover, .control-button:hover {
+            background: #444;
+            border-color: #555;
+        }
+        
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .switch-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #333;
+            padding: 10px;
+            border-radius: 6px;
+        }
+        
+        .switch-container label {
+            margin: 0;
+            color: var(--primary-text);
+            font-weight: 500;
+        }
+        
+        .switch {
+          position: relative;
+          display: inline-block;
+          width: 44px;
+          height: 24px;
+        }
+
+        .switch input { display: none; }
+
+        .slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background-color: #444;
+          transition: .4s;
+          border-radius: 24px;
+        }
+
+        .slider:before {
+          position: absolute;
+          content: "";
+          height: 18px;
+          width: 18px;
+          left: 3px;
+          bottom: 3px;
+          background-color: white;
+          transition: .4s;
+          border-radius: 50%;
+        }
+
+        input:checked + .slider {
+          background-color: var(--accent-color);
+        }
+
+        input:checked + .slider:before {
+          transform: translateX(20px);
+        }
+        
+        #forceMatrixEditor {
+            display: grid;
+            gap: 5px;
+            margin-top: 10px;
+            user-select: none;
+        }
+        .force-cell {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            border-radius: 4px;
+            cursor: ns-resize;
+            transition: transform 0.1s ease;
+            position: relative;
+        }
+        .force-cell:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <input type="file" id="loadStateInput" style="display: none;" accept=".json">
+
+    <div id="ui-toggle-button" title="Toggle Controls (C)">
+        <svg viewBox="0 0 24 24">
+            <path d="M19.43,12.98 C19.47,12.66 19.5,12.34 19.5,12 C19.5,11.66 19.47,11.34 19.43,11.02 L21.54,9.37 C21.73,9.22 21.78,8.95 21.66,8.73 L19.66,5.27 C19.54,5.05 19.27,4.96 19.05,5.04 L16.56,6.04 C16.04,5.65 15.48,5.32 14.87,5.09 L14.49,2.42 C14.46,2.18 14.25,2 14,2 L10,2 C9.75,2 9.54,2.18 9.51,2.42 L9.13,5.09 C8.52,5.32 7.96,5.66 7.44,6.04 L4.95,5.04 C4.73,4.96 4.46,5.05 4.34,5.27 L2.34,8.73 C2.21,8.95 2.27,9.22 2.46,9.37 L4.57,11.02 C4.53,11.34 4.5,11.66 4.5,12 C4.5,12.34 4.53,12.66 4.57,12.98 L2.46,14.63 C2.27,14.78 2.21,15.05 2.34,15.27 L4.34,18.73 C4.46,18.95 4.73,19.03 4.95,18.96 L7.44,17.96 C7.96,18.34 8.52,18.68 9.13,18.91 L9.51,21.58 C9.54,21.82 9.75,22 10,22 L14,22 C14.25,22 14.46,21.82 14.49,21.58 L14.87,18.91 C15.48,18.68 16.04,18.34 16.56,17.96 L19.05,18.96 C19.27,19.03 19.54,18.95 19.66,18.73 L21.66,15.27 C21.78,15.05 21.73,14.78 21.54,14.63 L19.43,12.98 Z M12,15.5 C10.07,15.5 8.5,13.93 8.5,12 C8.5,10.07 10.07,8.5 12,8.5 C13.93,8.5 15.5,10.07 15.5,12 C15.5,13.93 13.93,15.5 12,15.5 Z"/>
+        </svg>
+    </div>
+
+    <div id="controls">
+        <div class="controls-header">
+            <h2>Controls</h2>
+        </div>
+        <div class="controls-content">
+            
+            <div class="accordion-item active">
+                <div class="accordion-header"><h3>Presets</h3><span class="icon">&#9660;</span></div>
+                <div class="accordion-content">
+                    <div class="control-container"><label for="presetSelector"><span>Select a preset</span></label><select id="presetSelector"><option value="custom">Custom</option><option value="default">Default</option><option value="swarm">Swarm</option><option value="gliders">Gliders</option><option value="crystals">Crystals</option><option value="diatoms">Diatoms</option><option value="isolation">Isolation</option><option value="chaos">Chaos</option><option value="nebula">Nebula</option><option value="dancers">Dancers</option><option value="vortex">Vortex</option><option value="rain">Rain</option><option value="fireworks">Fireworks</option></select></div>
+                </div>
+            </div>
+
+            <div class="accordion-item active">
+                <div class="accordion-header"><h3>Simulation</h3><span class="icon">&#9660;</span></div>
+                <div class="accordion-content">
+                    <div class="control-container"><label for="particleCount"><span>Particles</span><span id="particleCountValue"></span></label><input type="range" id="particleCount" min="1000" max="50000" step="1000"></div>
+                    <div class="control-container"><label for="numTypes"><span>Particle Types</span><span id="numTypesValue"></span></label><input type="range" id="numTypes" min="2" max="8"></div>
+                    <div class="control-container"><label for="friction"><span>Friction</span><span id="frictionValue"></span></label><input type="range" id="friction" min="0.0" max="0.5" step="0.01"></div>
+                    <div class="control-container"><label for="velocityLimit"><span>Velocity Limit</span><span id="velocityLimitValue"></span></label><input type="range" id="velocityLimit" min="0.5" max="10.0" step="0.5"></div>
+                    <div class="control-container"><label for="timeStep"><span>Time Step</span><span id="timeStepValue"></span></label><input type="range" id="timeStep" min="0.1" max="2.0" step="0.05"></div>
+                    <div class="control-container"><label for="worldBoundary"><span>World Boundary</span></label><select id="worldBoundary"><option value="wrap">Wrap Around</option><option value="bounce">Bounce</option></select></div>
+                </div>
+            </div>
+
+            <div class="accordion-item active">
+                <div class="accordion-header"><h3>Interaction</h3><span class="icon">&#9660;</span></div>
+                <div class="accordion-content">
+                    <div class="control-container"><label for="collisionDistance"><span>Collision Distance</span><span id="collisionDistanceValue"></span></label><input type="range" id="collisionDistance" min="0" max="50" step="0.5"></div>
+                    <div class="control-container"><label for="collisionStrength"><span>Collision Strength</span><span id="collisionStrengthValue"></span></label><input type="range" id="collisionStrength" min="0" max="10.0" step="0.1"></div>
+                    <div class="control-container"><label for="minRadius"><span>Attraction Radius</span><span id="minRadiusValue"></span></label><input type="range" id="minRadius" min="5" max="100"></div>
+                    <div class="control-container"><label for="maxRadius"><span>Max Interaction Radius</span><span id="maxRadiusValue"></span></label><input type="range" id="maxRadius" min="50" max="300"></div>
+                    <div class="control-container"><label for="maxForce"><span>Max Force</span><span id="maxForceValue"></span></label><input type="range" id="maxForce" min="0.1" max="3.0" step="0.1"></div>
+                    <div class="control-container"><label for="attractionBias"><span>Attraction Bias</span><span id="attractionBiasValue"></span></label><input type="range" id="attractionBias" min="-2.0" max="2.0" step="0.1"></div>
+                    <div class="control-container"><label for="forcePower"><span>Force Power</span><span id="forcePowerValue"></span></label><input type="range" id="forcePower" min="0.1" max="4.0" step="0.1"></div>
+                    <div class="control-container"><div class="switch-container"><label for="flatForce">Constant Force</label><label class="switch"><input type="checkbox" id="flatForce"><span class="slider"></span></label></div></div>
+                    <div class="control-container"><h4>Force Matrix Editor</h4><div id="forceMatrixEditor"></div></div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <div class="accordion-header"><h3>Global Forces</h3><span class="icon">&#9660;</span></div>
+                <div class="accordion-content">
+                    <div class="control-container"><label for="gravityX"><span>Gravity X</span><span id="gravityXValue"></span></label><input type="range" id="gravityX" min="-0.1" max="0.1" step="0.005"></div>
+                    <div class="control-container"><label for="gravityY"><span>Gravity Y</span><span id="gravityYValue"></span></label><input type="range" id="gravityY" min="-0.1" max="0.1" step="0.005"></div>
+                    <div class="control-container"><label for="centerPull"><span>Center Pull</span><span id="centerPullValue"></span></label><input type="range" id="centerPull" min="-0.02" max="0.02" step="0.0005"></div>
+                    <div class="control-container"><label for="attractionMultiplier"><span>Attraction Multiplier</span><span id="attractionMultiplierValue"></span></label><input type="range" id="attractionMultiplier" min="0" max="2.0" step="0.05"></div>
+                    <div class="control-container"><label for="repulsionMultiplier"><span>Repulsion Multiplier</span><span id="repulsionMultiplierValue"></span></label><input type="range" id="repulsionMultiplier" min="0" max="2.0" step="0.05"></div>
+                </div>
+            </div>
+            
+            <div class="accordion-item">
+                <div class="accordion-header"><h3>Visuals</h3><span class="icon">&#9660;</span></div>
+                <div class="accordion-content">
+                    <div class="control-container"><label for="particleSize"><span>Particle Size</span><span id="particleSizeValue"></span></label><input type="range" id="particleSize" min="1.0" max="5.0" step="0.1"></div>
+                    <div class="control-container"><label for="zoom"><span>Zoom</span><span id="zoomValue"></span></label><input type="range" id="zoom" min="0.1" max="5.0" step="0.05"></div>
+                    <div class="control-container"><label for="colorPalette"><span>Color Palette</span></label><select id="colorPalette"><option value="vibrant">Vibrant</option><option value="pastel">Pastel</option><option value="fire">Fire & Ice</option><option value="forest">Forest</option></select></div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <div class="accordion-header"><h3>Manage State</h3><span class="icon">&#9660;</span></div>
+                <div class="accordion-content">
+                    <div class="button-group"><button class="control-button" id="saveState">Save State</button><button class="control-button" id="loadState">Load State</button></div>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button class="control-button" id="randomizeForces">Randomize Forces</button>
+                <button class="control-button" id="resetSimulation">Reset Simulation</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const gl = canvas.getContext('webgl2', { antialias: false });
+
+    if (!gl) {
+        document.body.innerHTML = '<div style="text-align: center; padding: 50px; font-size: 1.5em; color: white;">WebGL2 is not supported. This simulation requires GPU acceleration.</div>';
+    }
+
+    // --- Global State ---
+    let width, height, frame = 0;
+    let forceMatrix = [];
+    let isPaused = false;
+
+    // --- Default Simulation Parameters ---
+    const defaultParams = {
+        numTypes: 4, maxForce: 1.0, attractionBias: 0.0, friction: 0.1,
+        minRadius: 20, maxRadius: 100, velocityLimit: 5.0, particleSize: 2.0,
+        particleCount: 10000, zoom: 1.0, forcePower: 1.0, flatForce: false,
+        colorPalette: 'vibrant', timeStep: 1.0, gravityX: 0.0, gravityY: 0.0, centerPull: 0.0,
+        collisionDistance: 10.0, collisionStrength: 1.0, 
+        attractionMultiplier: 1.0, repulsionMultiplier: 1.0,
+        worldBoundary: 'wrap',
+        preset: 'custom'
+    };
+    let params = { ...defaultParams };
+    
+    // --- Color Palettes & Presets ---
+    const palettes = { vibrant: ['#ff4d4d', '#4dff4d', '#4d4dff', '#ff4dff', '#4dffff', '#ffff4d', '#ffaa4d', '#aa4dff'], pastel: ['#fbb4ae', '#b3cde3', '#ccebc5', '#decbe4', '#fed9a6', '#ffffcc', '#e5d8bd', '#fddaec'], fire: ['#ffbe0b', '#fb5607', '#ff006e', '#8338ec', '#3a86ff', '#ffffff', '#c2c2c2', '#8d8d8d'], forest: ['#004b23', '#006400', '#007200', '#008000', '#38b000', '#70e000', '#9ef01a', '#ccff33'] };
+    const paletteNames = { vibrant: ["Red", "Green", "Blue", "Magenta", "Cyan", "Yellow", "Orange", "Purple"], pastel: ["Salmon", "Sky", "Mint", "Lavender", "Peach", "Cream", "Beige", "Pink"], fire: ["Gold", "Orange", "Hot Pink", "Indigo", "Dodger Blue", "White", "Silver", "Gray"], forest: ["Dark Green", "Forest", "Green", "Lime", "Bright Green", "Chartreuse", "Lime Green", "Electric Lime"] };
+    
+    const basePreset = { ...defaultParams }; 
+    const presetConfigurations = {
+        'default': { params: { ...basePreset }, forceMatrix: null },
+        'swarm': { params: { ...basePreset, particleCount: 20000, numTypes: 5, maxForce: 1.5, attractionBias: 0.1, friction: 0.1, minRadius: 10, maxRadius: 60, velocityLimit: 2.5, forcePower: 2, collisionDistance: 15, collisionStrength: 2.5, centerPull: 0.005, attractionMultiplier: 1.2, repulsionMultiplier: 0.8, colorPalette: 'forest' }, forceMatrix: null },
+        'gliders': { params: { ...basePreset, particleCount: 15000, numTypes: 6, maxForce: 1.2, attractionBias: 0, friction: 0.05, minRadius: 10, maxRadius: 40, velocityLimit: 3, forcePower: 2.5, collisionDistance: 8, collisionStrength: 3, centerPull: 0, attractionMultiplier: 1, repulsionMultiplier: 1.1, colorPalette: 'vibrant' }, forceMatrix: null },
+        'crystals': { params: { ...basePreset, particleCount: 12000, numTypes: 2, maxForce: 1.5, attractionBias: -0.5, friction: 0.2, minRadius: 30, maxRadius: 80, velocityLimit: 2, forcePower: 3, collisionDistance: 28, collisionStrength: 5.0, centerPull: 0.0015, colorPalette: 'pastel' }, forceMatrix: [ -1, 0.5, 0.5, -1 ] },
+        'diatoms': { params: { ...basePreset, particleCount: 15000, numTypes: 3, maxForce: 2, attractionBias: 0, friction: 0.2, minRadius: 10, maxRadius: 40, velocityLimit: 3, collisionDistance: 35, collisionStrength: 2.0, centerPull: 0, attractionMultiplier: 1, repulsionMultiplier: 1.5, colorPalette: 'pastel' }, forceMatrix: [ -1, 0.8, 0.8, 0.8, -1, 0.8, 0.8, 0.8, -1 ] },
+        'isolation': { params: { ...basePreset, particleCount: 10000, numTypes: 4, maxForce: 2.5, attractionBias: -1, friction: 0.02, minRadius: 30, maxRadius: 120, velocityLimit: 6, collisionDistance: 25, collisionStrength: 2.0, centerPull: 0, attractionMultiplier: 0.8, repulsionMultiplier: 1.2, colorPalette: 'fire' }, forceMatrix: null },
+        'chaos': { params: { ...basePreset, particleCount: 20000, numTypes: 7, maxForce: 2.0, attractionBias: 0, friction: 0.01, minRadius: 5, maxRadius: 150, velocityLimit: 8.0, forcePower: 0.8, collisionDistance: 2, collisionStrength: 1, centerPull: 0, colorPalette: 'vibrant' }, forceMatrix: null },
+        'nebula': { params: { ...basePreset, particleCount: 30000, numTypes: 4, friction: 0.05, minRadius: 50, maxRadius: 150, velocityLimit: 1.5, centerPull: 0.0005, colorPalette: 'fire', collisionDistance: 5, collisionStrength: 0.5 }, forceMatrix: [ -0.5, 0.2, -0.1, 0.1, 0.2, -0.5, 0.2, -0.1, -0.1, 0.2, -0.5, 0.2, 0.1, -0.1, 0.2, -0.5] },
+        'dancers': { params: { ...basePreset, particleCount: 5000, numTypes: 3, friction: 0.02, minRadius: 20, maxRadius: 120, velocityLimit: 4, forcePower: 1.5, colorPalette: 'vibrant', collisionDistance: 10, collisionStrength: 2.0 }, forceMatrix: [ -1.5, 1, 1, 1, -1.5, 1, 1, 1, -1.5 ] },
+        'vortex': { params: { ...basePreset, particleCount: 15000, numTypes: 2, friction: 0.01, minRadius: 80, maxRadius: 120, velocityLimit: 5, centerPull: 0.01, colorPalette: 'pastel', collisionDistance: 2, collisionStrength: 1.0 }, forceMatrix: [0.1, -1.0, 1.0, 0.1] },
+        'rain': { params: { ...basePreset, particleCount: 8000, numTypes: 1, friction: 0.01, gravityY: 0.1, velocityLimit: 7, worldBoundary: 'bounce', colorPalette: 'pastel', collisionDistance: 15, collisionStrength: 0.1, minRadius: 0, maxRadius: 0 }, forceMatrix: [-1] },
+        'fireworks': { params: { ...basePreset, particleCount: 10000, numTypes: 5, friction: 0.08, centerPull: -0.005, velocityLimit: 6, worldBoundary: 'bounce', colorPalette: 'vibrant', collisionDistance: 1, collisionStrength: 0.2, minRadius: 0, maxRadius: 0 }, forceMatrix: null },
+    };
+
+    // --- WebGL Shaders ---
+    const updateVertexSrc = `#version 300 es
+    precision highp float;
+    // INs from buffers
+    in vec2 a_pos; 
+    in vec2 a_vel; 
+    in float a_type;
+
+    // OUTs to transform feedback buffers
+    out vec2 v_newPos; 
+    out vec2 v_newVel;
+
+    // Uniforms from JS
+    uniform vec2 u_resolution, u_gravity;
+    uniform float u_friction, u_velocityLimit, u_minRadius, u_maxRadius, u_forcePower, u_timeStep, u_centerPull;
+    uniform float u_collisionDistance, u_collisionStrength, u_attractionMultiplier, u_repulsionMultiplier;
+    uniform bool u_flatForce; 
+    uniform int u_particleCount;
+    uniform int u_worldBoundary; // 0 for wrap, 1 for bounce
+    
+    // Textures containing all particle data
+    uniform sampler2D u_positionsTexture;
+    uniform sampler2D u_typesTexture;
+    uniform sampler2D u_forceMatrix;
+
+    void main() {
+        vec2 pos = a_pos;
+        vec2 vel = a_vel;
+        float type = a_type;
+
+        vec2 center = u_resolution / 2.0;
+        vec2 to_center = center - pos;
+        vec2 totalForce = u_gravity + (to_center * u_centerPull);
+
+        int textureWidth = textureSize(u_positionsTexture, 0).x;
+
+        for (int i = 0; i < u_particleCount; ++i) {
+            ivec2 texCoord = ivec2(i % textureWidth, i / textureWidth);
+            vec2 otherPos = texelFetch(u_positionsTexture, texCoord, 0).xy;
+            
+            vec2 diff = otherPos - pos;
+            if (length(diff) < 0.0001) {
+                continue;
+            }
+
+            float otherType = texelFetch(u_typesTexture, texCoord, 0).r;
+            vec2 toroidal_diff;
+
+            if (u_worldBoundary == 0) { // Wrap
+                toroidal_diff.x = (abs(diff.x) > u_resolution.x * 0.5) ? diff.x - u_resolution.x * sign(diff.x) : diff.x;
+                toroidal_diff.y = (abs(diff.y) > u_resolution.y * 0.5) ? diff.y - u_resolution.y * sign(diff.y) : diff.y;
+            } else { // Bounce
+                toroidal_diff = diff;
+            }
+            float dist = length(toroidal_diff);
+            
+            if (dist > 0.0) {
+                if (dist < u_collisionDistance) {
+                    float repulsionFactor = pow((u_collisionDistance - dist) / u_collisionDistance, 2.0);
+                    totalForce -= toroidal_diff / dist * u_collisionStrength * repulsionFactor;
+                } else if (dist > u_minRadius && dist < u_maxRadius) {
+                    float forceValue = texelFetch(u_forceMatrix, ivec2(int(type), int(otherType)), 0).r;
+                    float falloff = 1.0 - (dist - u_minRadius) / (u_maxRadius - u_minRadius);
+                    float force = u_flatForce ? forceValue : forceValue * pow(falloff, u_forcePower);
+                    
+                    if (force > 0.0) { // Repulsion
+                        force *= u_repulsionMultiplier;
+                    } else { // Attraction
+                        force *= u_attractionMultiplier;
+                    }
+                    totalForce += force * (toroidal_diff / dist);
+                }
+            }
+        }
+        vel = (vel + totalForce) * (1.0 - u_friction);
+        float speed = length(vel);
+        if (speed > u_velocityLimit) { vel = (vel / speed) * u_velocityLimit; }
+        pos += vel * u_timeStep;
+
+        if (u_worldBoundary == 0) { // Wrap
+            pos = mod(pos + u_resolution, u_resolution);
+        } else { // Bounce
+            if (pos.x < 0.0) { pos.x = 0.0; vel.x *= -0.9; }
+            if (pos.x > u_resolution.x) { pos.x = u_resolution.x; vel.x *= -0.9; }
+            if (pos.y < 0.0) { pos.y = 0.0; vel.y *= -0.9; }
+            if (pos.y > u_resolution.y) { pos.y = u_resolution.y; vel.y *= -0.9; }
+        }
+
+        v_newPos = pos;
+        v_newVel = vel;
+    }`;
+    const renderVertexSrc = `#version 300 es
+    precision highp float;
+    in vec2 a_pos; in float a_type;
+    uniform vec2 u_resolution; uniform float u_zoom, u_pointSize;
+    uniform vec3 u_colors[8];
+    out vec3 v_color;
+    void main() {
+        vec2 centeredPos = a_pos - u_resolution / 2.0;
+        vec2 scaledPos = centeredPos * u_zoom + u_resolution / 2.0;
+        vec2 clipSpace = (scaledPos / u_resolution) * 2.0 - 1.0;
+        gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
+        gl_PointSize = u_pointSize * u_zoom;
+        v_color = u_colors[int(a_type)];
+    }`;
+
+    // --- WebGL Helper Functions ---
+    function createShader(gl, type, source) { const s=gl.createShader(type); gl.shaderSource(s, source); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.error('Shader error:', gl.getShaderInfoLog(s)); return null; } return s; }
+    function createProgram(gl, vs, fs, tfs) { const p=gl.createProgram(); gl.attachShader(p, vs); gl.attachShader(p, fs); if (tfs) { gl.transformFeedbackVaryings(p, tfs, gl.SEPARATE_ATTRIBS); } gl.linkProgram(p); if (!gl.getProgramParameter(p, gl.LINK_STATUS)) { console.error('Program error:', gl.getProgramInfoLog(p)); return null; } return p; }
+    function createTexture(gl, iFmt, w, h, fmt, type, data) { const t=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST); gl.texImage2D(gl.TEXTURE_2D, 0, iFmt, w, h, 0, fmt, type, data); return t; }
+
+    // --- Shader Programs & Locations ---
+    const updateProgram = createProgram(gl, createShader(gl, gl.VERTEX_SHADER, updateVertexSrc), createShader(gl, gl.FRAGMENT_SHADER, `#version 300 es\nprecision highp float;out vec4 c;void main(){c=vec4(0.);}`), ['v_newPos', 'v_newVel']);
+    const renderProgram = createProgram(gl, createShader(gl, gl.VERTEX_SHADER, renderVertexSrc), createShader(gl, gl.FRAGMENT_SHADER, `#version 300 es\nprecision mediump float;in vec3 v_color;out vec4 c;void main(){c=vec4(v_color,1.);}`));
+    const uLocs = { gravity: gl.getUniformLocation(updateProgram, 'u_gravity'), centerPull: gl.getUniformLocation(updateProgram, 'u_centerPull'), collisionDistance: gl.getUniformLocation(updateProgram, 'u_collisionDistance'), collisionStrength: gl.getUniformLocation(updateProgram, 'u_collisionStrength'), attractionMultiplier: gl.getUniformLocation(updateProgram, 'u_attractionMultiplier'), repulsionMultiplier: gl.getUniformLocation(updateProgram, 'u_repulsionMultiplier'), pCount: gl.getUniformLocation(updateProgram, 'u_particleCount'), posTex: gl.getUniformLocation(updateProgram, 'u_positionsTexture'), typeTex: gl.getUniformLocation(updateProgram, 'u_typesTexture'), fMat: gl.getUniformLocation(updateProgram, 'u_forceMatrix'), fPow: gl.getUniformLocation(updateProgram, 'u_forcePower'), fFlat: gl.getUniformLocation(updateProgram, 'u_flatForce'), timeStep: gl.getUniformLocation(updateProgram, 'u_timeStep'), worldBoundary: gl.getUniformLocation(updateProgram, 'u_worldBoundary'), pos: gl.getAttribLocation(updateProgram, 'a_pos'), vel: gl.getAttribLocation(updateProgram, 'a_vel'), type: gl.getAttribLocation(updateProgram, 'a_type'), res: gl.getUniformLocation(updateProgram, 'u_resolution'), fric: gl.getUniformLocation(updateProgram, 'u_friction'), velLim: gl.getUniformLocation(updateProgram, 'u_velocityLimit'), minR: gl.getUniformLocation(updateProgram, 'u_minRadius'), maxR: gl.getUniformLocation(updateProgram, 'u_maxRadius'), };
+    const rLocs = { pos: gl.getAttribLocation(renderProgram, 'a_pos'), type: gl.getAttribLocation(renderProgram, 'a_type'), res: gl.getUniformLocation(renderProgram, 'u_resolution'), zoom: gl.getUniformLocation(renderProgram, 'u_zoom'), pSize: gl.getUniformLocation(renderProgram, 'u_pointSize'), colors: gl.getUniformLocation(renderProgram, 'u_colors[0]') };
+
+    // --- Buffers and State ---
+    let vao = [gl.createVertexArray(), gl.createVertexArray()], posBuffer = [gl.createBuffer(), gl.createBuffer()], velBuffer = [gl.createBuffer(), gl.createBuffer()], typeBuffer = gl.createBuffer(), tf = gl.createTransformFeedback(), forceMatrixTexture;
+
+    // --- Main Functions ---
+    function init() { resizeCanvas(); loadSettings(); generateForceMatrixEditor(); updateForceMatrixTexture(); initParticles(); animate(); }
+    
+    function initParticles(positions, velocities, types) {
+        isPaused = true;
+        const pCount = params.particleCount; 
+        const initPos = positions || new Float32Array(pCount * 2); 
+        const initVel = velocities || new Float32Array(pCount * 2); 
+        const initType = types || new Float32Array(pCount);
+
+        if (!positions) { 
+            // Special initial condition for Fireworks
+            if (params.preset === 'fireworks') {
+                for (let i = 0; i < pCount; i++) {
+                    initPos[i * 2] = width / 2;
+                    initPos[i * 2 + 1] = height / 2;
+                }
+            } else {
+                 for (let i = 0; i < pCount; i++) { 
+                    initPos[i * 2] = Math.random() * width; 
+                    initPos[i * 2 + 1] = Math.random() * height; 
+                }
+            }
+        }
+        if (!types) { for (let i = 0; i < pCount; i++) { initType[i] = Math.floor(Math.random() * params.numTypes); } }
+
+        for (let i = 0; i < 2; i++) { gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer[i]); gl.bufferData(gl.ARRAY_BUFFER, initPos, gl.DYNAMIC_DRAW); gl.bindBuffer(gl.ARRAY_BUFFER, velBuffer[i]); gl.bufferData(gl.ARRAY_BUFFER, initVel, gl.DYNAMIC_DRAW); }
+        gl.bindBuffer(gl.ARRAY_BUFFER, typeBuffer); gl.bufferData(gl.ARRAY_BUFFER, initType, gl.STATIC_DRAW);
+
+        for (let i = 0; i < 2; i++) { 
+            gl.bindVertexArray(vao[i]); 
+            gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer[i]); gl.enableVertexAttribArray(uLocs.pos); gl.vertexAttribPointer(uLocs.pos, 2, gl.FLOAT, false, 0, 0); gl.enableVertexAttribArray(rLocs.pos); gl.vertexAttribPointer(rLocs.pos, 2, gl.FLOAT, false, 0, 0); 
+            gl.bindBuffer(gl.ARRAY_BUFFER, velBuffer[i]); gl.enableVertexAttribArray(uLocs.vel); gl.vertexAttribPointer(uLocs.vel, 2, gl.FLOAT, false, 0, 0); 
+            gl.bindBuffer(gl.ARRAY_BUFFER, typeBuffer); gl.enableVertexAttribArray(uLocs.type); gl.vertexAttribPointer(uLocs.type, 1, gl.FLOAT, false, 0, 0); gl.enableVertexAttribArray(rLocs.type); gl.vertexAttribPointer(rLocs.type, 1, gl.FLOAT, false, 0, 0); 
+        }
+        gl.bindVertexArray(null); frame = 0; isPaused = false;
+    }
+
+    function initForceMatrix() { forceMatrix = []; for (let i = 0; i < params.numTypes*params.numTypes; i++) { forceMatrix.push(Number(((Math.random() * 2 - 1) * params.maxForce + params.attractionBias).toFixed(2))); } }
+    function updateForceMatrixTexture() { if (forceMatrixTexture) gl.deleteTexture(forceMatrixTexture); const n=params.numTypes, data=new Float32Array(forceMatrix); forceMatrixTexture = createTexture(gl, gl.R32F, n, n, gl.RED, gl.FLOAT, data); }
+    function resizeCanvas() { width = window.innerWidth; height = window.innerHeight; canvas.width = width; canvas.height = height; gl.viewport(0, 0, width, height); }
+
+    function animate() {
+        if(isPaused) { requestAnimationFrame(animate); return; }
+        const sourceIdx = frame % 2, destIdx = (frame + 1) % 2;
+        const texW = Math.ceil(Math.sqrt(params.particleCount)), texH = Math.ceil(params.particleCount / texW);
+        
+        gl.useProgram(updateProgram);
+        gl.bindVertexArray(vao[sourceIdx]);
+
+        gl.uniform2f(uLocs.res, width, height);
+        gl.uniform2f(uLocs.gravity, params.gravityX, params.gravityY);
+        gl.uniform1f(uLocs.centerPull, params.centerPull);
+        gl.uniform1f(uLocs.fric, params.friction);
+        gl.uniform1f(uLocs.velLim, params.velocityLimit);
+        gl.uniform1f(uLocs.minR, params.minRadius);
+        gl.uniform1f(uLocs.maxR, params.maxRadius);
+        gl.uniform1f(uLocs.fPow, params.forcePower);
+        gl.uniform1f(uLocs.timeStep, params.timeStep);
+        gl.uniform1f(uLocs.collisionDistance, params.collisionDistance);
+        gl.uniform1f(uLocs.collisionStrength, params.collisionStrength);
+        gl.uniform1f(uLocs.attractionMultiplier, params.attractionMultiplier);
+        gl.uniform1f(uLocs.repulsionMultiplier, params.repulsionMultiplier);
+        gl.uniform1i(uLocs.pCount, params.particleCount);
+        gl.uniform1i(uLocs.fFlat, params.flatForce ? 1 : 0);
+        gl.uniform1i(uLocs.worldBoundary, params.worldBoundary === 'wrap' ? 0 : 1);
+        
+        const posData = new Float32Array(texW*texH*4), typeData = new Float32Array(texW*texH*4);
+        gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer[sourceIdx]); let tempPos = new Float32Array(params.particleCount * 2); gl.getBufferSubData(gl.ARRAY_BUFFER, 0, tempPos);
+        gl.bindBuffer(gl.ARRAY_BUFFER, typeBuffer); let tempType = new Float32Array(params.particleCount); gl.getBufferSubData(gl.ARRAY_BUFFER, 0, tempType);
+        for(let i=0; i<params.particleCount; i++){ posData[i*4]=tempPos[i*2]; posData[i*4+1]=tempPos[i*2+1]; typeData[i*4]=tempType[i]; }
+        let posTex = createTexture(gl, gl.RGBA32F, texW, texH, gl.RGBA, gl.FLOAT, posData);
+        let typeTex = createTexture(gl, gl.RGBA32F, texW, texH, gl.RGBA, gl.FLOAT, typeData);
+
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, posTex); gl.uniform1i(uLocs.posTex, 0);
+        gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, typeTex); gl.uniform1i(uLocs.typeTex, 1);
+        gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, forceMatrixTexture); gl.uniform1i(uLocs.fMat, 2);
+
+        gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, tf);
+        gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, posBuffer[destIdx]);
+        gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 1, velBuffer[destIdx]);
+        gl.enable(gl.RASTERIZER_DISCARD);
+        gl.beginTransformFeedback(gl.POINTS); gl.drawArrays(gl.POINTS, 0, params.particleCount); gl.endTransformFeedback();
+        gl.disable(gl.RASTERIZER_DISCARD);
+        gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null); gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 1, null);
+        gl.deleteTexture(posTex); gl.deleteTexture(typeTex);
+
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        gl.useProgram(renderProgram); gl.bindVertexArray(vao[destIdx]);
+        gl.uniform2f(rLocs.res, width, height); gl.uniform1f(rLocs.zoom, params.zoom); gl.uniform1f(rLocs.pSize, params.particleSize);
+        gl.uniform3fv(rLocs.colors, palettes[params.colorPalette].slice(0, params.numTypes).flatMap(h => { const r=parseInt(h.slice(1,3),16)/255,g=parseInt(h.slice(3,5),16)/255,b=parseInt(h.slice(5,7),16)/255; return [r,g,b]; }));
+        gl.drawArrays(gl.POINTS, 0, params.particleCount);
+
+        frame++; requestAnimationFrame(animate);
+    }
+    
+    // --- UI & State Management ---
+    function updateUI() {
+        const formatters = {friction:v=>v.toFixed(2), velocityLimit:v=>v.toFixed(1), maxForce:v=>v.toFixed(1), attractionBias:v=>v.toFixed(1), forcePower:v=>v.toFixed(1), particleSize:v=>v.toFixed(1), zoom:v=>v.toFixed(2), timeStep:v=>v.toFixed(2), gravityX: v=>v.toFixed(3), gravityY: v=>v.toFixed(3), centerPull: v=>v.toFixed(4), collisionDistance: v=>v.toFixed(1), collisionStrength: v=>v.toFixed(2), attractionMultiplier: v=>v.toFixed(2), repulsionMultiplier: v=>v.toFixed(2) };
+        for (const key in params) {
+            const el = document.getElementById(key); const elVal = document.getElementById(key + 'Value');
+            if(el) { if (el.type === 'checkbox') el.checked = params[key]; else el.value = params[key]; }
+            if (elVal) elVal.textContent = formatters[key] ? formatters[key](params[key]) : params[key];
+        }
+        document.getElementById('presetSelector').value = params.preset;
+    }
+    function saveSettings() { localStorage.setItem('cellFlowSettingsGPU_v16', JSON.stringify({params, forceMatrix})); }
+    function loadSettings() {
+        let state;
+        try { state = JSON.parse(localStorage.getItem('cellFlowSettingsGPU_v16')); } catch (e) { state = null; }
+        if (state && state.params && state.forceMatrix) {
+            Object.assign(params, state.params);
+            forceMatrix = state.forceMatrix;
+        } else {
+            loadPreset('default');
+            return;
+        }
+        updateUI();
+    }
+    function loadPreset(name) {
+        if (!presetConfigurations[name]) { params.preset = 'custom'; saveSettings(); return; }
+        isPaused = true;
+        const preset = presetConfigurations[name];
+        const oldParticleCount = params.particleCount;
+        const oldNumTypes = params.numTypes;
+        
+        Object.assign(params, basePreset);
+        Object.assign(params, preset.params);
+        params.preset = name;
+
+        if (preset.forceMatrix) { forceMatrix = [...preset.forceMatrix]; } else { initForceMatrix(); }
+        
+        updateUI();
+        generateForceMatrixEditor();
+        updateForceMatrixTexture();
+
+        if (oldParticleCount !== params.particleCount || oldNumTypes !== params.numTypes || name === 'fireworks') {
+            initParticles();
+        } else {
+             isPaused = false;
+        }
+        
+        saveSettings();
+    }
+    function saveState() {
+        isPaused = true;
+        const sourceIdx = frame % 2; const pCount = params.particleCount; const positions = new Float32Array(pCount * 2); const velocities = new Float32Array(pCount * 2); const types = new Float32Array(pCount);
+        gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer[sourceIdx]); gl.getBufferSubData(gl.ARRAY_BUFFER, 0, positions);
+        gl.bindBuffer(gl.ARRAY_BUFFER, velBuffer[sourceIdx]); gl.getBufferSubData(gl.ARRAY_BUFFER, 0, velocities);
+        gl.bindBuffer(gl.ARRAY_BUFFER, typeBuffer); gl.getBufferSubData(gl.ARRAY_BUFFER, 0, types);
+        const state = { params: { ...params, preset: 'custom' }, forceMatrix, positions: Array.from(positions), velocities: Array.from(velocities), types: Array.from(types) };
+        const blob = new Blob([JSON.stringify(state)], {type: 'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `cellflow_state_${Date.now()}.json`; a.click(); URL.revokeObjectURL(url);
+        isPaused = false;
+    }
+    function loadState(event) {
+        const file = event.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            try {
+                const state = JSON.parse(e.target.result);
+                if (!state.params || !state.forceMatrix || !state.positions || !state.velocities || !state.types) throw new Error("Invalid state file");
+                isPaused = true;
+                Object.assign(params, state.params); forceMatrix = state.forceMatrix;
+                updateUI(); generateForceMatrixEditor(); updateForceMatrixTexture();
+                initParticles(new Float32Array(state.positions), new Float32Array(state.velocities), new Float32Array(state.types));
+                saveSettings();
+            } catch (err) { console.error("Failed to load state:", err); alert("Error: Invalid or corrupted state file."); isPaused = false; }
+        };
+        reader.readAsText(file); event.target.value = '';
+    }
+
+    function getForceColor(value) {
+        const max = params.maxForce + Math.abs(params.attractionBias);
+        const normalized = Math.max(-1, Math.min(1, value / max));
+        const r = normalized > 0 ? normalized * 255 : 0;
+        const b = normalized < 0 ? Math.abs(normalized) * 255 : 0;
+        const grayness = 1 - Math.abs(normalized);
+        const gray = 40;
+        return `rgb(${r * (1-grayness) + gray * grayness}, ${0}, ${b * (1-grayness) + gray * grayness})`;
+    }
+
+    function generateForceMatrixEditor() {
+        const editor = document.getElementById('forceMatrixEditor');
+        editor.innerHTML = '';
+        editor.style.gridTemplateColumns = `repeat(${params.numTypes}, 1fr)`;
+        for(let i=0; i<params.numTypes; i++){
+            for(let j=0; j<params.numTypes; j++){
+                const cell = document.createElement('div');
+                cell.className = 'force-cell';
+                const index = i * params.numTypes + j;
+                cell.style.backgroundColor = getForceColor(forceMatrix[index]);
+                const typeNames = paletteNames[params.colorPalette] || [];
+                const fromType = typeNames[i] || `Type ${i+1}`;
+                const toType = typeNames[j] || `Type ${j+1}`;
+                cell.title = `Force: ${fromType} -> ${toType}\nValue: ${forceMatrix[index]?.toFixed(2)}`;
+                cell.dataset.index = index;
+                cell.dataset.from = fromType;
+                cell.dataset.to = toType;
+                editor.appendChild(cell);
+            }
+        }
+    }
+    
+    // --- Event Listeners ---
+    function setupEventListeners() {
+        const forceEditor = document.getElementById('forceMatrixEditor');
+        forceEditor.addEventListener('mousedown', (e) => handleMatrixInteraction(e));
+        forceEditor.addEventListener('touchstart', (e) => handleMatrixInteraction(e), {passive: false});
+
+        function handleMatrixInteraction(e) {
+            if (!e.target.classList.contains('force-cell')) return;
+            e.preventDefault();
+            const cell = e.target;
+            const index = parseInt(cell.dataset.index, 10);
+            const startY = e.touches ? e.touches[0].clientY : e.clientY;
+            const initialValue = forceMatrix[index];
+            const maxVal = params.maxForce + Math.abs(params.attractionBias) + 1;
+
+            const onMove = (moveEvent) => {
+                const currentY = moveEvent.touches ? moveEvent.touches[0].clientY : moveEvent.clientY;
+                const dy = startY - currentY;
+                const newValue = Math.max(-maxVal, Math.min(maxVal, initialValue + dy * 0.05));
+                forceMatrix[index] = newValue;
+                cell.style.backgroundColor = getForceColor(newValue);
+                cell.title = `Force: ${cell.dataset.from} -> ${cell.dataset.to}\nValue: ${newValue.toFixed(2)}`;
+                updateForceMatrixTexture();
+                params.preset = 'custom';
+                updateUI();
+            };
+
+            const onEnd = () => {
+                window.removeEventListener('mousemove', onMove);
+                window.removeEventListener('mouseup', onEnd);
+                window.removeEventListener('touchmove', onMove);
+                window.removeEventListener('touchend', onEnd);
+                saveSettings();
+            };
+
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('mouseup', onEnd);
+            window.addEventListener('touchmove', onMove);
+            window.addEventListener('touchend', onEnd);
+        }
+
+        const sliders = ['particleCount', 'numTypes', 'friction', 'velocityLimit', 'minRadius', 'maxRadius', 'forcePower', 'particleSize', 'zoom', 'timeStep', 'gravityX', 'gravityY', 'centerPull', 'collisionDistance', 'collisionStrength', 'attractionMultiplier', 'repulsionMultiplier'];
+        sliders.forEach(p => {
+            const el = document.getElementById(p);
+            el.addEventListener('input', () => { params[p] = parseFloat(el.value); params.preset = 'custom'; updateUI(); });
+            if (p === 'particleCount' || p === 'numTypes') {
+                 el.addEventListener('change', () => { 
+                      const oldNumTypes = forceMatrix.length / (Math.sqrt(forceMatrix.length));
+                      if(p === 'numTypes' && params.numTypes !== oldNumTypes) { 
+                          initForceMatrix(); generateForceMatrixEditor(); 
+                      } 
+                      saveSettings();
+                      initParticles();
+                 });
+            } else {
+                 const save = () => { saveSettings(); };
+                 el.addEventListener('mouseup', save); el.addEventListener('touchend', save);
+            }
+        });
+        ['maxForce', 'attractionBias'].forEach(p => {
+            const el = document.getElementById(p);
+            function updateForce() { params[p] = parseFloat(el.value); updateUI(); initForceMatrix(); generateForceMatrixEditor(); updateForceMatrixTexture(); saveSettings(); }
+            el.addEventListener('input', () => { params[p] = parseFloat(el.value); updateUI(); });
+            el.addEventListener('change', updateForce);
+        });
+
+        document.getElementById('flatForce').addEventListener('change', e => { params.flatForce = e.target.checked; params.preset = 'custom'; saveSettings(); updateUI(); });
+        document.getElementById('colorPalette').addEventListener('change', e => { params.colorPalette = e.target.value; params.preset = 'custom'; saveSettings(); updateUI(); generateForceMatrixEditor(); });
+        document.getElementById('worldBoundary').addEventListener('change', e => { params.worldBoundary = e.target.value; params.preset = 'custom'; saveSettings(); updateUI(); });
+
+        document.getElementById('randomizeForces').addEventListener('click', () => { initForceMatrix(); generateForceMatrixEditor(); updateForceMatrixTexture(); params.preset = 'custom'; updateUI(); saveSettings(); });
+        document.getElementById('resetSimulation').addEventListener('click', () => { initParticles(); }); 
+        document.getElementById('ui-toggle-button').addEventListener('click', () => document.getElementById('controls').classList.toggle('visible'));
+        document.getElementById('presetSelector').addEventListener('change', e => loadPreset(e.target.value));
+        document.getElementById('saveState').addEventListener('click', saveState);
+        document.getElementById('loadState').addEventListener('click', () => document.getElementById('loadStateInput').click());
+        document.getElementById('loadStateInput').addEventListener('change', loadState);
+        document.querySelectorAll('.accordion-header').forEach(h => { h.addEventListener('click', () => { const i = h.parentElement; i.classList.toggle('active'); const c = i.querySelector('.accordion-content'); c.style.maxHeight = i.classList.contains('active') ? c.scrollHeight + "px" : '0'; }); });
+        document.addEventListener('keydown', (e) => { if (e.target.matches('input, select')) return; if (e.key === ' ') { e.preventDefault(); document.getElementById('randomizeForces').click(); } else if (e.key.toLowerCase() === 'c') { document.getElementById('controls').classList.toggle('visible'); }});
+        document.addEventListener('wheel', e => { if (e.target !== canvas) return; e.preventDefault(); params.zoom -= e.deltaY * 0.001 * params.zoom; params.zoom = Math.min(Math.max(0.1, params.zoom), 5.0); updateUI(); saveSettings(); }, {passive: false});
+        window.addEventListener('resize', resizeCanvas);
+    }
+    
+    if(gl) {
+        setupEventListeners();
+        init();
+        document.querySelectorAll('.accordion-item.active .accordion-content').forEach(c => { c.style.maxHeight = c.scrollHeight + 'px'; });
+    }
+
+</script>
+</body>
+</html>
