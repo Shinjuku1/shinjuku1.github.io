@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evolutionary Odyssey - Advanced</title>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --surface-color: rgba(30, 30, 30, 0.85);
+            --surface-2-color: #2a2a2a;
+            --primary-text-color: #e0e0e0;
+            --secondary-text-color: #b3b3b3;
+            --accent-color: #ffffff;
+            --btn-text-color: #000000;
+            --panel-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            --font-family: 'Inter', Arial, sans-serif;
+        }
+
+        body, html {
+            margin: 0; padding: 0; overflow: hidden;
+            width: 100%; height: 100%;
+            background-color: var(--bg-color); color: var(--primary-text-color);
+            font-family: var(--font-family); user-select: none;
+        }
+        canvas { display: block; border: none; }
+        
+        .ui-panel {
+            background-color: rgba(30, 30, 30, 0.7);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+        }
+        
+        #info-panel {
+            position: absolute; top: 15px; left: 15px;
+            padding: 10px 15px; font-size: 14px;
+            pointer-events: none; line-height: 1.6; min-width: 220px;
+        }
+        #info-panel hr {
+            border: none; border-top: 1px solid var(--surface-2-color); margin: 8px 0;
+        }
+        .info-line { display: flex; justify-content: space-between; }
+        .info-line span:first-child { color: var(--secondary-text-color); padding-right: 15px;}
+
+        #settings-toggle-btn {
+            position: fixed; top: 15px; right: 15px;
+            width: 48px; height: 48px; background-color: rgba(30, 30, 30, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 50%;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            z-index: 1001; transition: background-color 0.3s;
+        }
+        #settings-toggle-btn:hover { background-color: rgba(50, 50, 50, 0.9); }
+        #settings-toggle-btn svg { width: 24px; height: 24px; fill: white; }
+
+        .settings-panel {
+            position: fixed; top: 0; right: 0; width: 360px; height: 100%;
+            background-color: var(--surface-color); 
+            backdrop-filter: blur(10px);
+            box-shadow: var(--panel-shadow);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            transform: translateX(100%); transition: transform 0.3s ease-in-out;
+            z-index: 1000; display: flex; flex-direction: column;
+            padding: 0; box-sizing: border-box;
+        }
+        .settings-panel.open { transform: translateX(0); }
+        .settings-header { padding: 20px 20px 15px 20px; }
+        .settings-header h2 { margin: 0; font-size: 1.4em; }
+        .settings-body { flex-grow: 1; overflow-y: auto; padding: 0 5px 0 20px; }
+        .settings-footer { padding: 15px 20px; background-color: rgba(30, 30, 30, 0.5); border-top: 1px solid var(--surface-2-color); box-shadow: 0 -5px 10px rgba(0,0,0,0.2); }
+
+        .tab-buttons { display: flex; border-bottom: 1px solid var(--surface-2-color); margin: 0 20px 20px 20px; flex-wrap: wrap;}
+        .tab-button {
+            padding: 10px 15px; border: none; background: none; color: var(--secondary-text-color);
+            cursor: pointer; font-size: 0.8em; transition: all 0.2s;
+            border-bottom: 2px solid transparent; text-transform: uppercase;
+        }
+        .tab-button.active { color: var(--accent-color); border-bottom-color: var(--accent-color); }
+        .tab-content { display: none; padding-right: 15px; }
+        .tab-content.active { display: block; }
+
+        .setting-item { margin-bottom: 20px; }
+        .setting-item label { position:relative; display: block; font-size: 0.9em; color: var(--secondary-text-color); margin-bottom: 8px; }
+        .setting-item div { display: flex; align-items: center; gap: 15px; }
+        .setting-item input[type="range"] { -webkit-appearance:none; appearance:none; width:100%; height:4px; background:var(--surface-2-color); border-radius:2px; outline:none; }
+        .setting-item input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:16px; height:16px; background:var(--accent-color); border-radius:50%; cursor:pointer; }
+        .setting-item input[type="text"], .setting-item input[type="color"] { width:100%; padding: 8px; background:var(--surface-2-color); color:var(--primary-text-color); border:1px solid #444; border-radius:4px; }
+        .setting-item input[type="color"] { padding: 4px; height: 30px; }
+        .setting-item .value-display { font-size: 0.9em; min-width: 45px; text-align: right; }
+        
+        .btn {
+            background-color: var(--surface-2-color); color: var(--primary-text-color);
+            border: 1px solid #444; border-radius: 4px;
+            padding: 8px 12px; cursor: pointer; transition: all 0.2s;
+            font-size: 0.9em; text-align: center;
+        }
+        .btn:hover { background-color: #3c3c3c; border-color: #555;}
+        .btn-primary { background-color: var(--accent-color); color: var(--btn-text-color); border-color: #fff; }
+        .btn-primary:hover { background-color: #e0e0e0; border-color: #e0e0e0; }
+        .btn-danger { background-color: #cf6679; color: var(--btn-text-color); border-color: #cf6679; }
+        .btn-danger:hover { background-color: #e08e9b; border-color: #e08e9b; }
+
+        .settings-group { margin-bottom: 15px; }
+        .settings-group .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .select-wrapper { display: inline-block; width: 100%; }
+        select { width:100%; padding:8px; background:var(--surface-2-color); color:var(--primary-text-color); border:1px solid #444; border-radius:4px; }
+        
+        [data-tooltip] { cursor: help; }
+        [data-tooltip]::after {
+            content: attr(data-tooltip); position: absolute;
+            bottom: 125%; left: 50%; transform: translateX(-50%);
+            background-color: #333; color: #fff; padding: 8px 12px;
+            border-radius: 4px; font-size: 0.8em; white-space: pre-wrap;
+            opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s;
+            pointer-events: none; z-index: 10; width: 250px; text-align: center;
+        }
+        [data-tooltip]:hover::after { opacity: 1; visibility: visible; }
+
+        @media (max-width: 600px) {
+            .settings-panel { width: 100%; }
+            #info-panel { max-width: calc(100% - 90px); }
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <canvas id="simCanvas"></canvas>
+    
+    <div id="info-panel" class="ui-panel">
+        <div id="global-stats"></div>
+        <div id="creature-stats"></div>
+    </div>
+
+    <button id="settings-toggle-btn" aria-label="Toggle Settings">
+       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+    </button>
+    
+    <div id="settings-panel" class="settings-panel">
+        <div class="settings-header"> <h2>Settings</h2> </div>
+        <div class="tab-buttons">
+            <button class="tab-button active" data-tab="general">General</button>
+            <button class="tab-button" data-tab="evolution">Evolution</button>
+            <button class="tab-button" data-tab="brain">Brain</button>
+            <button class="tab-button" data-tab="physics">Physics</button>
+            <button class="tab-button" data-tab="world">World</button>
+            <button class="tab-button" data-tab="visuals">Visuals</button>
+            <button class="tab-button" data-tab="interaction">Interaction</button>
+        </div>
+        <div id="settings-body" class="settings-body"></div>
+        <div class="settings-footer">
+            <div class="settings-group"> <div class="select-wrapper"> <select id="presets-select"></select> </div> </div>
+            <div class="settings-group"> <div class="btn-grid"> <button id="save-state-btn" class="btn">Save Sim</button> <button id="load-state-btn" class="btn">Load Sim</button> </div> </div>
+            <div class="settings-group"> <div class="btn-grid"> <button id="reset-pop-btn" class="btn">Reset Population</button> <button id="reset-settings-btn" class="btn">Reset Settings</button> </div> </div>
+            <button id="full-reset-btn" class="btn btn-danger" style="width:100%">Full Simulation Reset</button>
+        </div>
+    </div>
+    <input type="file" id="load-state-input" style="display:none" accept=".json">
+
+    <script>
+        // --- DEFAULTS & CONFIGURATION ---
+        const DEFAULT_CONFIG = Object.freeze({
+            // General
+            maxCreatures: 1000, maxFoodItems: 2000, minCreatures: 100, minFoodItems: 200,
+            initialCreatureCount: 1000,
+            // Evolution
+            reproductionType: 'both', matingUrgeRate: 0.001, reproductionCooldown: 200,
+            offspringEnergyFraction: 0.5, colorDifferenceThreshold: 36, lifespan: 2000,
+            agingLogic: 'linear',
+            agingRateMutation: 0.05, baseMutationRate: 0.05, speedMutationRate: 0.05, visionMutationRate: 0.05, 
+            energyLossMutationRate: 0.05, sizeMutationRate: 0.05, braveryMutationRate: 0.05, massDragMutationRate: 0.05,
+            // Brain
+            brainMutationRate: 0.1, brainMutationChance: 0.5, hiddenLayers: 1, neuronsPerLayer: 8,
+            activationFunction: 'tanh', herdingInstinct: 0.5,
+            // Physics
+            initialEnergy: 100, maxEnergy: 2000,
+            maxSpeed: 50, maxAcceleration: 20, baseEnergyLossRate: 0.1, sizeEnergyMultiplier: 1,
+            pushForce: 0.5, allowOverlapPercentage: 0.25, massDrag: 0.01,
+            // World
+            foodEnergy: 20, foodGrowthRate: 0.2, foodSpawnInterval: 100, environmentalToxicity: 0,
+            worldBounds: 'wrap', foodReproductionThreshold: 100, foodOverlapPercentage: 0.25,
+            foodMaxSpeed: 0.2, foodEnergyMutationRate: 0.05, foodSpeedMutationRate: 0.05,
+            // Visuals
+            foodColor: '#FFFFFF', foodStyle: 'ring', foodBlinks: false, foodSizeScaling: 'energy-based',
+            showVisionRanges: false, creatureTheme: 'normal', creatureSizeScaling: 'energy-based',
+            creatureBodyStyle: 'cellular', kingAuraStyle: 'pulsing',
+            // Interaction
+            interactionMode: 'observe',
+            // Internal
+            spatialGridCellSize: 100, minFoodSize: 0.2, absorptionRate: 5, visionRangeFactor: 10,
+        });
+        let CONFIG = { ...DEFAULT_CONFIG };
+
+        // --- GLOBAL STATE ---
+        const canvas = document.getElementById('simCanvas'), ctx = canvas.getContext('2d');
+        const uiElements = {
+            infoPanel: { global: document.getElementById('global-stats'), creature: document.getElementById('creature-stats') },
+            settingsPanel: document.getElementById('settings-panel'), settingsToggleButton: document.getElementById('settings-toggle-btn'),
+            presetsSelect: document.getElementById('presets-select'),
+            saveBtn: document.getElementById('save-state-btn'), loadBtn: document.getElementById('load-state-btn'), loadInput: document.getElementById('load-state-input'),
+            resetPopBtn: document.getElementById('reset-pop-btn'), resetSettingsBtn: document.getElementById('reset-settings-btn'), fullResetBtn: document.getElementById('full-reset-btn'),
+        };
+        let creatures = [], foodItems = [], effects = [], spatialGrid, lastClickedCreature = null, kingCreature = null;
+        let lastFoodSpawnTime = 0, frameCount = 0, fps = 0, lastFpsUpdateTime = performance.now(), lastFrameTime = performance.now();
+
+        // --- CORE CLASSES (NN, GRID, ENTITIES) ---
+        const ACTIVATION_FUNCTIONS = {
+            sigmoid: x => 1 / (1 + Math.exp(-x)),
+            tanh: Math.tanh,
+            relu: x => Math.max(0, x),
+        };
+
+        class Effect {
+            constructor(x, y, color, type) {
+                this.x = x; this.y = y; this.color = color;
+                this.type = type; this.lifespan = 30; this.alive = true;
+            }
+            update() {
+                this.lifespan--;
+                if (this.lifespan <= 0) this.alive = false;
+            }
+            draw() {
+                const alpha = this.lifespan / 30;
+                ctx.globalAlpha = alpha;
+                ctx.beginPath();
+                if (this.type === 'eat') {
+                    ctx.strokeStyle = this.color;
+                    ctx.lineWidth = 2;
+                    ctx.arc(this.x, this.y, 10 * (1 - alpha), 0, 2 * Math.PI);
+                    ctx.stroke();
+                } else { // 'food_spawn'
+                    ctx.fillStyle = this.color;
+                    ctx.arc(this.x, this.y, 5 * alpha, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        class NeuralNetwork {
+            constructor(neuronCounts, primordial = false) { 
+                this.levels = []; 
+                for(let i=0; i<neuronCounts.length-1; i++) {
+                    this.levels.push(new Level(neuronCounts[i], neuronCounts[i+1]));
+                }
+                if (primordial) {
+                    this.#createPrimordialBrain();
+                }
+            }
+
+            #createPrimordialBrain() {
+                const firstLevel = this.levels[0];
+                for(let i=0; i<firstLevel.weights.length; i++) {
+                    for(let j=0; j<firstLevel.weights[i].length; j++) {
+                        firstLevel.weights[i][j] = (Math.random() - 0.5) * 0.1;
+                    }
+                }
+                if (firstLevel.inputs.length > 5 && firstLevel.outputs.length > 0) {
+                     firstLevel.weights[5][0] = 1.5;
+                }
+                if (firstLevel.inputs.length > 7 && firstLevel.outputs.length > 0) {
+                    firstLevel.weights[7][0] = -1.5;
+                }
+            }
+
+            static feedForward(inputs, network) { return network.levels.reduce((outputs, level) => Level.feedForward(outputs, level), inputs); }
+            static mutate(network, amount=1, chance=1) { network.levels.forEach(level => {
+                for(let i=0; i<level.biases.length; i++) if(Math.random()<chance) level.biases[i]=lerp(level.biases[i],Math.random()*2-1,amount);
+                for(let i=0; i<level.weights.length; i++) for(let j=0; j<level.weights[i].length; j++) if(Math.random()<chance) level.weights[i][j]=lerp(level.weights[i][j],Math.random()*2-1,amount);
+            });}
+        }
+        class Level {
+            constructor(inputCount, outputCount) { this.inputs=new Array(inputCount); this.outputs=new Array(outputCount); this.biases=new Array(outputCount); this.weights=Array.from({length:inputCount},()=>new Array(outputCount)); Level.#randomize(this); }
+            static #randomize(level) { for(let i=0;i<level.inputs.length;i++)for(let j=0;j<level.outputs.length;j++)level.weights[i][j]=Math.random()*2-1; for(let i=0;i<level.biases.length;i++)level.biases[i]=Math.random()*2-1; }
+            static feedForward(givenInputs, level) {
+                level.inputs = givenInputs;
+                const activationFunc = ACTIVATION_FUNCTIONS[CONFIG.activationFunction] || ACTIVATION_FUNCTIONS.tanh;
+                for (let i=0;i<level.outputs.length;i++){ let sum=level.biases[i]; for(let j=0;j<level.inputs.length;j++)sum+=level.inputs[j]*level.weights[j][i]; level.outputs[i] = activationFunc(sum); }
+                return level.outputs;
+            }
+        }
+        class SpatialGrid {
+             constructor(w,h,c){this.cs=c;this.gw=Math.ceil(w/c);this.gh=Math.ceil(h/c);this.grid=Array.from({length:this.gw*this.gh},()=>[]);}
+             clear(){this.grid.forEach(c=>c.length=0);} getIndex(x,y){return Math.floor(y/this.cs)*this.gw+Math.floor(x/this.cs);}
+             insert(e){const i=this.getIndex(e.x,e.y);if(i>=0&&i<this.grid.length)this.grid[i].push(e);}
+             getNearby(e, r){
+                 const n=[], gx=Math.floor(e.x/this.cs), gy=Math.floor(e.y/this.cs);
+                 const radiusInCells = Math.ceil(r / this.cs);
+                 for(let y=-radiusInCells;y<=radiusInCells;y++)for(let x=-radiusInCells;x<=radiusInCells;x++){const cx=gx+x,cy=gy+y;if(cx>=0&&cx<this.gw&&cy>=0&&cy<this.gh)n.push(...this.grid[cy*this.gw+cx]);}
+                 return n;
+             }
+        }
+        class Food {
+            constructor(x, y, traits={}) {
+                this.x = x; this.y = y;
+                this.energy = traits.energy || CONFIG.foodEnergy;
+                this.maxEnergy = traits.maxEnergy || mutateValue(CONFIG.foodReproductionThreshold, CONFIG.foodEnergyMutationRate);
+                this.speedMultiplier = traits.speedMultiplier || mutateValue(1, CONFIG.foodSpeedMutationRate);
+                
+                this.isFood = true; this.alive = true;
+                this.dx = (Math.random() - 0.5) * CONFIG.foodMaxSpeed * this.speedMultiplier; 
+                this.dy = (Math.random() - 0.5) * CONFIG.foodMaxSpeed * this.speedMultiplier;
+                this.updateSize();
+            }
+            updateSize() { 
+                if (CONFIG.foodSizeScaling === 'fixed') {
+                    this.size = 3;
+                } else {
+                    this.size = Math.sqrt(this.energy); 
+                }
+            }
+            move() {
+                this.x += this.dx;
+                this.y += this.dy;
+                this.handleBoundaries();
+            }
+            handleBoundaries() {
+                if (CONFIG.worldBounds === 'wall') {
+                    if (this.x - this.size < 0) { this.x = this.size; this.dx *= -1; }
+                    if (this.x + this.size > canvas.width) { this.x = canvas.width - this.size; this.dx *= -1; }
+                    if (this.y - this.size < 0) { this.y = this.size; this.dy *= -1; }
+                    if (this.y + this.size > canvas.height) { this.y = canvas.height - this.size; this.dy *= -1; }
+                } else {
+                    if (this.x < 0) this.x += canvas.width;
+                    if (this.x > canvas.width) this.x -= canvas.width;
+                    if (this.y < 0) this.y += canvas.height;
+                    if (this.y > canvas.height) this.y -= canvas.height;
+                }
+            }
+            handlePhysics(){
+                spatialGrid.getNearby(this, this.size * 2).forEach(other=>{
+                    if(other === this || !other.isFood) return;
+                    const dx=other.x-this.x, dy=other.y-this.y, dist=Math.hypot(dx,dy);
+                    const minDist = this.size * (1 - CONFIG.foodOverlapPercentage) + other.size * (1 - CONFIG.foodOverlapPercentage);
+                    if(dist < minDist && dist > 0){
+                        const angle = Math.atan2(dy, dx);
+                        const overlap = minDist - dist;
+                        const pushForce = 0.1;
+                        this.x -= Math.cos(angle) * overlap * pushForce;
+                        this.y -= Math.sin(angle) * overlap * pushForce;
+                        other.x += Math.cos(angle) * overlap * pushForce;
+                        other.y += Math.sin(angle) * overlap * pushForce;
+                    }
+                });
+            }
+            _drawAt(x, y, time) {
+                ctx.beginPath();
+                ctx.arc(x, y, this.size, 0, 2 * Math.PI);
+                let styleColor = CONFIG.foodColor;
+                 if (CONFIG.foodBlinks) {
+                    ctx.globalAlpha = 0.6 + Math.sin(time / 200) * 0.4;
+                }
+                if(CONFIG.foodStyle === 'ring'){
+                    ctx.strokeStyle = styleColor; ctx.lineWidth = 2; ctx.stroke();
+                } else {
+                    ctx.fillStyle = styleColor; ctx.fill();
+                }
+                ctx.globalAlpha = 1.0;
+            }
+            draw(time) {
+                this._drawAt(this.x, this.y, time);
+                if (CONFIG.worldBounds === 'wrap') {
+                    if (this.x + this.size > canvas.width) this._drawAt(this.x - canvas.width, this.y, time);
+                    if (this.x - this.size < 0) this._drawAt(this.x + canvas.width, this.y, time);
+                    if (this.y + this.size > canvas.height) this._drawAt(this.x, this.y - canvas.height, time);
+                    if (this.y - this.size < 0) this._drawAt(this.x, this.y + canvas.height, time);
+                    if (this.x + this.size > canvas.width && this.y + this.size > canvas.height) this._drawAt(this.x - canvas.width, this.y - canvas.height, time);
+                    if (this.x - this.size < 0 && this.y - this.size < 0) this._drawAt(this.x + canvas.width, this.y + canvas.height, time);
+                    if (this.x + this.size > canvas.width && this.y - this.size < 0) this._drawAt(this.x - canvas.width, this.y + canvas.height, time);
+                    if (this.x - this.size < 0 && this.y + this.size > canvas.height) this._drawAt(this.x + canvas.width, this.y - canvas.height, time);
+                }
+            }
+            grow() {
+                if(this.energy < this.maxEnergy){
+                    this.energy+=CONFIG.foodGrowthRate;
+                    this.updateSize();
+                } else if (foodItems.length < CONFIG.maxFoodItems) {
+                    const energyForNew = this.energy * 0.5;
+                    this.energy -= energyForNew;
+                    const newFood = new Food(this.x + (Math.random() - 0.5) * 20, this.y + (Math.random() - 0.5) * 20, {
+                        energy: energyForNew,
+                        maxEnergy: this.maxEnergy,
+                        speedMultiplier: this.speedMultiplier,
+                    });
+                    foodItems.push(newFood);
+                    effects.push(new Effect(newFood.x, newFood.y, CONFIG.foodColor, 'food_spawn'));
+                }
+            }
+        }
+        class Creature {
+            constructor(x,y,traits={}) {
+                this.x=x; this.y=y; this.alive=true; this.isCreature=true; this.parent=traits.parent||null;
+                
+                this.age = 0; this.agingRate = traits.agingRate || 1;
+                this.lifespan = traits.lifespan || mutateValue(CONFIG.lifespan, CONFIG.baseMutationRate);
+                
+                this.matingUrge = 0; this.reproductionCooldown = 0;
+                this.turnDirection = (Math.random() > 0.5 ? 1 : -1);
+                this.turnTimer = 0;
+
+                this.maxEnergy=traits.maxEnergy||mutateValue(CONFIG.maxEnergy,CONFIG.baseMutationRate);
+                this.energy=traits.energy||CONFIG.initialEnergy;
+                this.reproductionThreshold = this.maxEnergy * 0.8;
+                
+                this.color=traits.color||randomColor();
+                this.direction=Math.random()*2*Math.PI;this.speed=0;
+                this.tail = [];
+                
+                this.maxSpeed=traits.maxSpeed||mutateValue(CONFIG.maxSpeed,CONFIG.speedMutationRate);
+                this.acceleration=0; this.maxAcceleration=CONFIG.maxAcceleration;
+                
+                this.energyLossRate=traits.energyLossRate||mutateValue(CONFIG.baseEnergyLossRate,CONFIG.energyLossMutationRate);
+                this.sizeEnergyMultiplier = traits.sizeEnergyMultiplier || mutateValue(CONFIG.sizeEnergyMultiplier, CONFIG.sizeMutationRate);
+                this.visionRangeFactor = traits.visionRangeFactor || mutateValue(CONFIG.visionRangeFactor, CONFIG.visionMutationRate);
+                this.bravery = traits.bravery || mutateValue(0.5, CONFIG.braveryMutationRate);
+                this.massDrag = traits.massDrag || mutateValue(CONFIG.massDrag, CONFIG.massDragMutationRate);
+                
+                const brainStructure = [10, ...Array(CONFIG.hiddenLayers).fill(CONFIG.neuronsPerLayer), 4];
+                this.brain=traits.brain||new NeuralNetwork(brainStructure, true);
+                
+                this.updateSizeAndVision();
+            }
+            
+            calculateSize() {
+                const nativeScaleFactor = 0.5;
+                if (CONFIG.creatureSizeScaling === 'logarithmic') {
+                    return Math.log(this.energy + 1) * (this.sizeEnergyMultiplier * 2) * nativeScaleFactor;
+                }
+                return Math.sqrt(this.energy) * this.sizeEnergyMultiplier * nativeScaleFactor;
+            }
+
+            updateSizeAndVision(){
+                this.size = this.calculateSize();
+                this.visionRange = this.size * this.visionRangeFactor;
+            }
+
+            think(){
+                let wallDistX = Math.min(this.x, canvas.width - this.x);
+                let wallDistY = Math.min(this.y, canvas.height - this.y);
+                let wallDist = Math.min(wallDistX, wallDistY);
+
+                const inputs=[
+                    this.energy/this.maxEnergy, 
+                    this.age/this.lifespan, 
+                    this.matingUrge,
+                    this.speed / this.maxSpeed,
+                    (CONFIG.worldBounds === 'wall') ? (wallDist / (canvas.width/2)) : 1,
+                    this.massDrag,
+                    0,0,0,0
+                ];
+                const visionSq=this.visionRange**2;
+                let nearest={food:null, prey:null, danger:null, mate:null}; 
+                let dists={food:Infinity, prey:Infinity, danger:Infinity, mate:Infinity};
+                let kinDirectionX = 0, kinDirectionY = 0, kinCount = 0;
+                let hasTarget = false;
+                const isLowEnergy = this.energy / this.maxEnergy < 0.4;
+
+                spatialGrid.getNearby(this, this.visionRange).forEach(e=>{
+                    if (e === this || !e.alive) return;
+                    const dSq=(this.x-e.x)**2+(this.y-e.y)**2;
+                    if(dSq > visionSq) return;
+
+                    if(e.isFood && dSq < dists.food){dists.food=dSq; nearest.food=e;}
+                    else if(e.isCreature){
+                        const cDiff = colorDifference(this.color, e.color);
+                        if (cDiff > CONFIG.colorDifferenceThreshold) {
+                            if(e.size > this.size * (1 + (1 - this.bravery)) && dSq < dists.danger){
+                                dists.danger=dSq; nearest.danger=e;
+                            } else if(this.size > e.size && dSq < dists.prey){
+                                dists.prey=dSq; nearest.prey=e;
+                            }
+                        } else {
+                            kinDirectionX += e.x - this.x; kinDirectionY += e.y - this.y;
+                            kinCount++;
+                            if (this.matingUrge > 0.8 && e.matingUrge > 0.8 && this.reproductionCooldown <= 0 && e.reproductionCooldown <= 0 && dSq < dists.mate) {
+                                dists.mate = dSq; nearest.mate = e;
+                            }
+                        }
+                    }
+                });
+
+                if(nearest.food) { inputs[6]=1-Math.sqrt(dists.food)/this.visionRange; hasTarget = true; }
+                if(nearest.prey && !isLowEnergy) { inputs[7]=1-Math.sqrt(dists.prey)/this.visionRange; hasTarget = true; }
+                if(nearest.danger) { inputs[8]=1-Math.sqrt(dists.danger)/this.visionRange; hasTarget = true; }
+                if(kinCount > 0) {
+                    const avgKinDist = Math.hypot(kinDirectionX, kinDirectionY) / kinCount;
+                    inputs[9] = (1 - avgKinDist / this.visionRange) * CONFIG.herdingInstinct;
+                }
+                
+                const[forward, turn, wantsToMate, wantsToSprint] = NeuralNetwork.feedForward(inputs, this.brain);
+                this.acceleration = lerp(-this.maxAcceleration * 0.5, this.maxAcceleration, forward);
+                this.wantsToSprint = wantsToSprint > 0.7;
+
+                if (nearest.danger) {
+                    this.direction = Math.atan2(this.y - nearest.danger.y, this.x - nearest.danger.x);
+                } else if (CONFIG.reproductionType !== 'asexual' && wantsToMate > 0.7 && nearest.mate && !isLowEnergy) {
+                    this.direction = Math.atan2(nearest.mate.y - this.y, nearest.mate.x - this.x);
+                } else if (nearest.prey && !isLowEnergy) {
+                    this.direction = Math.atan2(nearest.prey.y - this.y, nearest.prey.x - this.x);
+                } else if (nearest.food) {
+                    this.direction = Math.atan2(nearest.food.y - this.y, nearest.food.x - this.x);
+                } else {
+                    this.turnTimer--;
+                    if (this.turnTimer <= 0) {
+                        this.turnDirection *= -1;
+                        this.turnTimer = Math.random() * 200 + 50;
+                    }
+                    this.direction += this.turnDirection * 0.02 * (1 - Math.abs(turn)); 
+                    this.acceleration *= (1 - Math.abs(turn)); 
+                }
+                
+                this.direction += lerp(-0.3, 0.3, turn);
+            }
+
+            move(dt){
+                if(CONFIG.interactionMode === 'observe' && interactionState.target === this && interactionState.dragging) return;
+
+                this.think();
+                
+                this.age += this.agingRate;
+                this.reproductionCooldown = Math.max(0, this.reproductionCooldown - 1);
+                this.matingUrge = Math.min(1, this.matingUrge + (CONFIG.matingUrgeRate * (this.energy / this.maxEnergy)));
+
+                const pX=this.x, pY=this.y;
+                let effectiveMaxSpeed = this.maxSpeed / (1 + this.size * this.massDrag);
+                let energyCostMultiplier = 1;
+                
+                if (this.wantsToSprint && this.energy > this.maxEnergy * 0.2) {
+                    effectiveMaxSpeed *= 1.5;
+                    energyCostMultiplier = 3;
+                }
+
+                if (CONFIG.agingLogic === 'gradual' && this.age / this.lifespan > 0.75) {
+                    effectiveMaxSpeed *= 1 - (this.age / this.lifespan - 0.75) * 2;
+                }
+
+                this.speed+=this.acceleration*dt;
+                this.speed=Math.max(0,Math.min(effectiveMaxSpeed, this.speed));
+                const mS=this.speed*dt;
+                this.x+=Math.cos(this.direction)*mS;
+                this.y+=Math.sin(this.direction)*mS;
+
+                if (CONFIG.creatureBodyStyle === 'comet') {
+                    this.tail.push({x: this.x, y: this.y, size: this.size});
+                    if (this.tail.length > 20) this.tail.shift();
+                }
+
+                this.energy -= (Math.hypot(this.x-pX,this.y-pY)*this.energyLossRate) * energyCostMultiplier;
+                this.energy -= CONFIG.environmentalToxicity;
+                
+                this.handleBoundaries();
+                
+                if (this.energy <= 0 || this.age > this.lifespan) this.alive = false;
+
+                if (CONFIG.reproductionType !== 'sexual' && this.energy > this.reproductionThreshold && this.reproductionCooldown <= 0) {
+                    this.reproduce();
+                }
+            }
+
+            handleBoundaries(){
+                if (CONFIG.worldBounds === 'wall') {
+                    if (this.x - this.size < 0) { this.x = this.size; this.direction = Math.PI - this.direction; }
+                    if (this.x + this.size > canvas.width) { this.x = canvas.width - this.size; this.direction = Math.PI - this.direction; }
+                    if (this.y - this.size < 0) { this.y = this.size; this.direction = -this.direction; }
+                    if (this.y + this.size > canvas.height) { this.y = canvas.height - this.size; this.direction = -this.direction; }
+                } else {
+                    if (this.x < 0) this.x += canvas.width;
+                    if (this.x > canvas.width) this.x -= canvas.width;
+                    if (this.y < 0) this.y += canvas.height;
+                    if (this.y > canvas.height) this.y -= canvas.height;
+                }
+            }
+            handlePhysics(){spatialGrid.getNearby(this, this.size*2).forEach(other=>{if(other===this||!other.isCreature)return;const dx=other.x-this.x,dy=other.y-this.y,dist=Math.hypot(dx,dy);const minDist=this.size*(1-CONFIG.allowOverlapPercentage)+other.size*(1-CONFIG.allowOverlapPercentage);if(dist<minDist&&dist>0){const angle=Math.atan2(dy,dx),overlap=minDist-dist,totalMass=this.size+other.size;const pushX=Math.cos(angle)*overlap,pushY=Math.sin(angle)*overlap;this.x-=pushX*(other.size/totalMass)*CONFIG.pushForce;this.y-=pushY*(other.size/totalMass)*CONFIG.pushForce;other.x+=pushX*(this.size/totalMass)*CONFIG.pushForce;other.y+=pushY*(this.size/totalMass)*CONFIG.pushForce;}});}
+            
+            interact() {
+                let effectiveAbsorption = CONFIG.absorptionRate;
+                if (CONFIG.agingLogic === 'gradual' && this.age / this.lifespan > 0.75) {
+                    effectiveAbsorption *= 1 - (this.age / this.lifespan - 0.75);
+                }
+
+                spatialGrid.getNearby(this, this.size).forEach(e => {
+                    if (e === this || !e.alive) return;
+                    const distSq = (this.x - e.x)**2 + (this.y - e.y)**2;
+                    const interactionRadius = this.size + (e.size || 0);
+
+                    if (distSq < interactionRadius * interactionRadius) {
+                        if (e.isFood) {
+                            const amount = Math.min(effectiveAbsorption, e.energy);
+                            this.energy = Math.min(this.energy + amount, this.maxEnergy);
+                            e.energy -= amount; 
+                            if(e.energy < CONFIG.minFoodSize) e.alive = false;
+                            const themedColor = applyColorTheme(this.color, CONFIG.creatureTheme);
+                            effects.push(new Effect(e.x, e.y, themedColor, 'eat'));
+                        } else if (e.isCreature) {
+                            const cDiff = colorDifference(this.color, e.color);
+                            if (cDiff > CONFIG.colorDifferenceThreshold && this.size > e.size) {
+                                const amount = Math.min(effectiveAbsorption, e.energy);
+                                this.energy = Math.min(this.energy + amount, this.maxEnergy);
+                                e.energy -= amount;
+                            } else if (CONFIG.reproductionType !== 'asexual' && cDiff < CONFIG.colorDifferenceThreshold && this.matingUrge > 0.9 && e.matingUrge > 0.9 && this.energy > this.reproductionThreshold && e.energy > e.reproductionThreshold && this.reproductionCooldown <= 0 && e.reproductionCooldown <= 0) {
+                                this.reproduce(e);
+                                e.reproduce(this);
+                            }
+                        }
+                    }
+                });
+            }
+
+            reproduce(partner){
+                this.reproductionCooldown = CONFIG.reproductionCooldown;
+                this.matingUrge = 0;
+                
+                let offspringEnergy = this.energy * CONFIG.offspringEnergyFraction;
+                this.energy -= offspringEnergy;
+                
+                if (creatures.length >= CONFIG.maxCreatures) return;
+
+                let traits = {
+                    energy: offspringEnergy,
+                    color: mutateColor(this.color),
+                    brain: JSON.parse(JSON.stringify(this.brain))
+                };
+                
+                if (partner) {
+                    partner.reproductionCooldown = CONFIG.reproductionCooldown;
+                    partner.matingUrge = 0;
+                    traits.maxEnergy = mutateValue((this.maxEnergy + partner.maxEnergy)/2, CONFIG.baseMutationRate);
+                    traits.maxSpeed = mutateValue((this.maxSpeed + partner.maxSpeed)/2, CONFIG.speedMutationRate);
+                    traits.energyLossRate = mutateValue((this.energyLossRate + partner.energyLossRate)/2, CONFIG.energyLossMutationRate);
+                    traits.visionRangeFactor = mutateValue((this.visionRangeFactor + partner.visionRangeFactor)/2, CONFIG.visionMutationRate);
+                    traits.sizeEnergyMultiplier = mutateValue((this.sizeEnergyMultiplier + partner.sizeEnergyMultiplier)/2, CONFIG.sizeMutationRate);
+                    traits.bravery = mutateValue((this.bravery + partner.bravery)/2, CONFIG.braveryMutationRate);
+                    traits.lifespan = mutateValue((this.lifespan + partner.lifespan)/2, CONFIG.baseMutationRate);
+                    traits.agingRate = mutateValue((this.agingRate + partner.agingRate)/2, CONFIG.agingRateMutation);
+                    traits.massDrag = mutateValue((this.massDrag + partner.massDrag)/2, CONFIG.massDragMutationRate);
+                } else {
+                    traits.maxEnergy = mutateValue(this.maxEnergy, CONFIG.baseMutationRate);
+                    traits.maxSpeed = mutateValue(this.maxSpeed, CONFIG.speedMutationRate);
+                    traits.energyLossRate = mutateValue(this.energyLossRate, CONFIG.energyLossMutationRate);
+                    traits.visionRangeFactor = mutateValue(this.visionRangeFactor, CONFIG.visionMutationRate);
+                    traits.sizeEnergyMultiplier = mutateValue(this.sizeEnergyMultiplier, CONFIG.sizeMutationRate);
+                    traits.bravery = mutateValue(this.bravery, CONFIG.braveryMutationRate);
+                    traits.lifespan = mutateValue(this.lifespan, CONFIG.baseMutationRate);
+                    traits.agingRate = mutateValue(this.agingRate, CONFIG.agingRateMutation);
+                    traits.massDrag = mutateValue(this.massDrag, CONFIG.massDragMutationRate);
+                }
+                
+                NeuralNetwork.mutate(traits.brain, CONFIG.brainMutationRate, CONFIG.brainMutationChance);
+                creatures.push(new Creature(this.x, this.y, traits));
+            }
+
+            forceMutate() {
+                this.color = mutateColor(this.color);
+                this.maxSpeed = mutateValue(this.maxSpeed, 0.2);
+                this.sizeEnergyMultiplier = mutateValue(this.sizeEnergyMultiplier, 0.2);
+                this.bravery = mutateValue(this.bravery, 0.2);
+            }
+
+            _drawAt(x, y, time) {
+                 if(CONFIG.showVisionRanges){
+                    ctx.beginPath();ctx.arc(x,y,this.visionRange,0,2*Math.PI);
+                    ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;ctx.stroke();
+                }
+
+                const finalColor = applyColorTheme(this.color, CONFIG.creatureTheme);
+                const coreColor = applyColorTheme(this.color, CONFIG.creatureTheme, -20);
+                
+                if (this !== kingCreature) {
+                    const glow = ctx.createRadialGradient(x, y, this.size * 0.5, x, y, this.size * 1.5);
+                    glow.addColorStop(0, hslToHsla(finalColor, 0.27));
+                    glow.addColorStop(1, hslToHsla(finalColor, 0));
+                    ctx.fillStyle = glow;
+                    ctx.beginPath(); ctx.arc(x, y, this.size * 1.5, 0, 2*Math.PI); ctx.fill();
+                }
+
+                // Main body
+                if (CONFIG.creatureBodyStyle === 'ring') {
+                    ctx.strokeStyle = finalColor; ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.arc(x, y, this.size, 0, 2 * Math.PI); ctx.stroke();
+                } else if (CONFIG.creatureBodyStyle === 'comet') {
+                    ctx.fillStyle = finalColor;
+                    ctx.beginPath(); ctx.arc(x, y, this.size, 0, 2*Math.PI); ctx.fill();
+                    this.tail.forEach((p, i) => {
+                        const alpha = (i / this.tail.length) * 0.5;
+                        ctx.fillStyle = hslToHsla(finalColor, alpha);
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.size * (i/this.tail.length), 0, 2 * Math.PI);
+                        ctx.fill();
+                    });
+                }
+                else { // Default to 'cellular' or 'solid'
+                    ctx.beginPath();ctx.arc(x,y,this.size,0,2*Math.PI);
+                    ctx.fillStyle=finalColor; ctx.fill();
+
+                    if(CONFIG.creatureBodyStyle === 'cellular') {
+                        ctx.beginPath();ctx.arc(x,y,this.size * 0.5,0,2*Math.PI);
+                        ctx.fillStyle = coreColor; ctx.fill();
+                    }
+                }
+                
+                if(this===kingCreature){
+                    if (CONFIG.kingAuraStyle === 'pulsing') {
+                        const auraSize = this.size + 8 + Math.sin(time / 150) * 4;
+                        const kingAura = ctx.createRadialGradient(x, y, this.size, x, y, auraSize);
+                        kingAura.addColorStop(0, 'rgba(255, 223, 0, 0.5)');
+                        kingAura.addColorStop(1, 'rgba(255, 223, 0, 0)');
+                        ctx.fillStyle = kingAura;
+                        ctx.beginPath(); ctx.arc(x, y, auraSize, 0, 2*Math.PI); ctx.fill();
+                    } else if (CONFIG.kingAuraStyle === 'static') {
+                        ctx.strokeStyle='rgba(255, 223, 0, 0.8)'; ctx.lineWidth = 2;
+                        ctx.beginPath();ctx.arc(x,y,this.size + 6,0,2*Math.PI); ctx.stroke();
+                    } else if (CONFIG.kingAuraStyle === 'electric') {
+                        ctx.strokeStyle = 'rgba(255, 223, 0, 0.8)'; ctx.lineWidth = 1;
+                        for(let i=0; i<5; i++) {
+                            ctx.beginPath();
+                            let startAngle = Math.random() * 2 * Math.PI;
+                            let endAngle = startAngle + Math.random() * 0.5 - 0.25;
+                            let radius = this.size + 5 + Math.random() * 5;
+                            ctx.arc(x, y, radius, startAngle, endAngle);
+                            ctx.stroke();
+                        }
+                    }
+                }
+                
+                if(this===lastClickedCreature){
+                    ctx.strokeStyle='#FFD700'; ctx.lineWidth = 2;
+                    ctx.beginPath();ctx.arc(x,y,this.size + 3,0,2*Math.PI); ctx.stroke();
+                }
+            }
+            
+            draw(time) {
+                this._drawAt(this.x, this.y, time);
+                if (CONFIG.worldBounds === 'wrap') {
+                    if (this.x + this.size > canvas.width) this._drawAt(this.x - canvas.width, this.y, time);
+                    if (this.x - this.size < 0) this._drawAt(this.x + canvas.width, this.y, time);
+                    if (this.y + this.size > canvas.height) this._drawAt(this.x, this.y - canvas.height, time);
+                    if (this.y - this.size < 0) this._drawAt(this.x, this.y + canvas.height, time);
+                    if (this.x + this.size > canvas.width && this.y + this.size > canvas.height) this._drawAt(this.x - canvas.width, this.y - canvas.height, time);
+                    if (this.x - this.size < 0 && this.y - this.size < 0) this._drawAt(this.x + canvas.width, this.y + canvas.height, time);
+                    if (this.x + this.size > canvas.width && this.y - this.size < 0) this._drawAt(this.x - canvas.width, this.y + canvas.height, time);
+                    if (this.x - this.size < 0 && this.y + this.size > canvas.height) this._drawAt(this.x + canvas.width, this.y - canvas.height, time);
+                }
+            }
+        }
+
+        // --- COLOR THEME ENGINE ---
+        function lerp(a,b,t){return a+(b-a)*t;}
+        function map(value, in_min, in_max, out_min, out_max) {
+             return (value - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+        }
+
+        const COLOR_THEMES = {
+            'normal': { type: 'passthrough' }, 'pastel': { type: 'simple', s: 70, l: 80 },
+            'grayscale': { type: 'simple', s: 0 },
+            'fire-and-ice': { type: 'map', ranges: [{ from: [0, 180], to: [180, 240] }, { from: [181, 360], to: [0, 60] }], s: 100, l: 55 },
+            'cyber-grid': { type: 'map', ranges: [{ from: [0, 360], to: [180, 330] }], s: 100, l: 60 },
+            'molten-core': { type: 'map', ranges: [{ from: [0, 360], to: [-20, 50] }], s: 100, l: 45 },
+            'ethereal-forest': { type: 'map', ranges: [{ from: [0, 180], to: [80, 170] }, { from: [181, 360], to: [180, 260] }], s: 70, l: 40 },
+            'acid-bath': { type: 'map', ranges: [{ from: [0, 360], to: [70, 300] }], s: 100, l: 55 },
+            'nebula': { type: 'map', ranges: [{ from: [0, 360], to: [240, 340] }], s: 90, l: 50 },
+            'desert-sun': { type: 'map', ranges: [{ from: [0, 360], to: [15, 60] }], s: 95, l: 50 },
+            'emerald-city': { type: 'map', ranges: [{ from: [0, 360], to: [90, 160] }], s: 80, l: 40 },
+            'blood-moon': { type: 'map', ranges: [{ from: [0, 180], to: [-10, 20] }, {from: [181, 360], to: [0, 0]}], s: 90, l: 35 },
+            'royal': { type: 'map', ranges: [{from: [0, 120], to: [260, 290]}, {from: [121, 240], to: [40, 60]}, {from: [241, 360], to:[0,0]}], s: 80, l: 40},
+            'cotton-candy': { type: 'simple', s: 90, l: 85 },
+            'geode': { type: 'map', ranges: [{from: [0, 360], to: [190, 280]}], s: 85, l: 60},
+            'jungle': { type: 'map', ranges: [{from: [0, 60], to: [30, 80]}, {from: [61, 360], to:[80, 150]}], s: 70, l: 35},
+        };
+
+        function applyColorTheme(hslColor, themeKey, lightnessOffset = 0) {
+            const theme = COLOR_THEMES[themeKey];
+            if (!theme || theme.type === 'passthrough' || !hslColor) return hslColor;
+            
+            const { h, s, l } = parseHsl(hslColor);
+            const finalL = Math.max(0, Math.min(100, (theme.l ?? l) + lightnessOffset));
+
+            if (theme.type === 'simple') return `hsl(${h}, ${theme.s ?? s}%, ${finalL}%)`;
+
+            if (theme.type === 'map') {
+                let newHue = h;
+                for (const range of theme.ranges) {
+                    if (h >= range.from[0] && h <= range.from[1]) {
+                        newHue = map(h, range.from[0], range.from[1], range.to[0], range.to[1]);
+                        break;
+                    }
+                }
+                return `hsl(${Math.round(newHue + 360) % 360}, ${theme.s ?? s}%, ${finalL}%)`;
+            }
+
+            return hslColor;
+        }
+
+        // --- UTILITIES & HELPERS ---
+        function randomColor(){return`hsl(${Math.floor(Math.random()*360)},100%,50%)`;}
+        function getColorHue(c){ if (c.startsWith('hsl')) return parseInt(c.match(/\d+/)[0]); return 0; }
+        function parseHsl(hslColor) {
+            const match = hslColor.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+            if (!match) return { h: 0, s: 100, l: 50 };
+            const [h, s, l] = match.slice(1).map(Number);
+            return { h, s, l };
+        }
+        function hslToHsla(hslColor, alpha) {
+            if (!hslColor) return `hsla(0, 0%, 0%, ${alpha})`;
+            const { h, s, l } = parseHsl(hslColor);
+            return `hsla(${h}, ${s}%, ${l}%, ${alpha})`;
+        }
+        function colorDifference(c1,c2){const h1=getColorHue(c1),h2=getColorHue(c2),d=Math.abs(h1-h2);return Math.min(d,360-d);}
+        function mutateColor(c){return`hsl(${(getColorHue(c)+Math.floor(Math.random()*72)-36+360)%360},100%,50%)`;}
+        function mutateValue(v,r){return v+(Math.random()*2-1)*r*v;}
+        
+        // --- UI & STATE MANAGEMENT ---
+        function updateInfoPanel() {
+            uiElements.infoPanel.global.innerHTML = `<div class="info-line"><span>Creatures:</span> <span>${creatures.length}</span></div><div class="info-line"><span>Food:</span> <span>${foodItems.length}</span></div><div class="info-line"><span>FPS:</span> <span>${fps}</span></div>`;
+            if (lastClickedCreature && lastClickedCreature.alive) {
+                 uiElements.infoPanel.creature.innerHTML = `<hr><div class="info-line"><span>Energy:</span> <span>${lastClickedCreature.energy.toFixed(0)}</span></div><div class="info-line"><span>Age:</span> <span>${lastClickedCreature.age.toFixed(0)} / ${lastClickedCreature.lifespan.toFixed(0)}</span></div><div class="info-line"><span>Aging Rate:</span> <span>${lastClickedCreature.agingRate.toFixed(2)}</span></div><div class="info-line"><span>Bravery:</span> <span>${lastClickedCreature.bravery.toFixed(2)}</span></div>`;
+            } else {
+                 uiElements.infoPanel.creature.innerHTML = '';
+                 if (lastClickedCreature) lastClickedCreature = null;
+            }
+        }
+        function resizeCanvas(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;spatialGrid=new SpatialGrid(canvas.width,canvas.height,CONFIG.spatialGridCellSize);}
+        window.addEventListener('resize',resizeCanvas);
+        
+        // --- CORE SIMULATION ---
+        function resetPopulation(){creatures=[];foodItems=[];initialSpawn();}
+        function initialSpawn(){for(let i=0;i<CONFIG.initialCreatureCount;i++)creatures.push(new Creature(Math.random()*canvas.width,Math.random()*canvas.height));for(let i=0;i<CONFIG.maxFoodItems;i++)foodItems.push(new Food(Math.random()*canvas.width,Math.random()*canvas.height));}
+        function enforceMinMaxCounts(){if(creatures.length<CONFIG.minCreatures)creatures.push(new Creature(Math.random()*canvas.width,Math.random()*canvas.height));if(foodItems.length<CONFIG.minFoodItems)foodItems.push(new Food(Math.random()*canvas.width,Math.random()*canvas.height));}
+        
+        function evolve(time){
+            const dt=(time-lastFrameTime)/1000||0;lastFrameTime=time;
+            spatialGrid.clear();
+            creatures.forEach(c=>spatialGrid.insert(c));
+            foodItems.forEach(f=>spatialGrid.insert(f));
+            
+            creatures.forEach(c=>{if(c.alive){c.move(dt);c.interact();c.handlePhysics();c.updateSizeAndVision();}});
+            foodItems.forEach(f=>{if(f.alive){f.move(); f.grow(); f.handlePhysics();}});
+            
+            creatures=creatures.filter(c=>{if(!c.alive&&kingCreature===c)kingCreature=null;return c.alive;});
+            foodItems=foodItems.filter(f=>f.alive);
+            
+            enforceMinMaxCounts();
+            if(foodItems.length<CONFIG.maxFoodItems&&time-lastFoodSpawnTime>CONFIG.foodSpawnInterval){foodItems.push(new Food(Math.random()*canvas.width,Math.random()*canvas.height));lastFoodSpawnTime=time;}
+            
+            if((!kingCreature||!kingCreature.alive)&&creatures.length>0)kingCreature=creatures.reduce((l,c)=>c.size>l.size?c:l,creatures[0]);
+            
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            foodItems.forEach(f=>f.draw(time));
+            creatures.forEach(c=>c.draw(time));
+            effects.forEach(e => { e.update(); e.draw(); });
+            effects = effects.filter(e => e.alive);
+            
+            updateFPS(time);updateInfoPanel();
+            requestAnimationFrame(evolve);
+        }
+        function updateFPS(now){frameCount++;if(now-lastFpsUpdateTime>=1000){fps=frameCount;frameCount=0;lastFpsUpdateTime=now;}}
+        
+        // --- INTERACTION HANDLING ---
+        function getEntityAt(x, y) {
+            let closestEntity=null, closestDist=Infinity;
+            [...creatures,...foodItems].forEach(en=>{
+                const distSq=(x-en.x)**2+(y-en.y)**2;
+                if(distSq < en.size**2 && distSq < closestDist){
+                    closestDist=distSq; closestEntity=en;
+                }
+            });
+            return closestEntity;
+        }
+
+        let interactionState = { target: null, dragging: false, dragOffsetX: 0, dragOffsetY: 0 };
+        
+        function handleInteractionStart(e){
+            if(e.target.closest('.settings-panel')) return;
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches ? e.touches[0] : e;
+            const x = touch.clientX - rect.left;
+            const y = touch.clientY - rect.top;
+            const entity = getEntityAt(x, y);
+
+            lastClickedCreature = entity?.isCreature ? entity : null;
+
+            switch(CONFIG.interactionMode) {
+                case 'observe':
+                    if (entity) {
+                        interactionState = { target: entity, dragging: true, dragOffsetX: x - entity.x, dragOffsetY: y - entity.y };
+                    }
+                    break;
+                case 'kill':
+                    if (entity) entity.alive = false;
+                    break;
+                case 'feed':
+                    foodItems.push(new Food(x, y, {energy: 200}));
+                    break;
+                case 'spawn-creature':
+                    creatures.push(new Creature(x, y, { energy: CONFIG.initialEnergy }));
+                    break;
+                case 'mutate':
+                    if(entity?.isCreature) entity.forceMutate();
+                    break;
+            }
+        }
+        function handleInteractionMove(e){
+            if (CONFIG.interactionMode !== 'observe' || !interactionState.dragging || !interactionState.target) return;
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches ? e.touches[0] : e;
+            const x = touch.clientX - rect.left;
+            const y = touch.clientY - rect.top;
+            interactionState.target.x = x - interactionState.dragOffsetX;
+            interactionState.target.y = y - interactionState.dragOffsetY;
+        }
+        function handleInteractionEnd(e){
+            if (CONFIG.interactionMode === 'observe') {
+                e.preventDefault();
+                interactionState.dragging = false;
+            }
+        }
+        
+        // --- SETTINGS, PRESETS & STATE MANAGEMENT ---
+        const PRESETS={
+            "Default":{...DEFAULT_CONFIG},
+            "Hive Mind":{...DEFAULT_CONFIG, colorDifferenceThreshold: 5, herdingInstinct: 1.0, creatureTheme: 'cyber-grid', matingUrgeRate: 0.002, reproductionCooldown: 100},
+            "Clash of Titans":{...DEFAULT_CONFIG, creatureSizeScaling: 'logarithmic', foodEnergy: 100, maxFoodItems: 500, environmentalToxicity: 0.1, creatureTheme: 'molten-core', foodMaxSpeed: 0.05, foodReproductionThreshold: 200, massDrag: 0.05 },
+            "Amoeba Wars": {...DEFAULT_CONFIG, initialCreatureCount: 50, reproductionType: 'asexual', lifespan: 300, brainMutationRate: 0.3, baseMutationRate: 0.3, foodEnergy: 50, environmentalToxicity: 0.2, creatureTheme: 'acid-bath'},
+            "The Elders": {...DEFAULT_CONFIG, agingLogic: 'gradual', agingRate: 0.1, lifespan: 8000, initialEnergy: 500, maxEnergy: 5000, foodSpawnInterval: 500, creatureTheme: 'grayscale', reproductionType: 'sexual', matingUrgeRate: 0.0005},
+            "Red Queen's Race": {...DEFAULT_CONFIG, brainMutationRate: 0.5, foodEnergyMutationRate: 0.3, foodSpeedMutationRate: 0.3, creatureTheme: 'nebula'},
+            "Isle of Giants": {...DEFAULT_CONFIG, creatureSizeScaling: 'logarithmic', sizeEnergyMultiplier: 3, maxFoodItems: 200, foodEnergy: 300, creatureTheme: 'desert-sun', massDrag: 0.1},
+            "Glacial Pace": {...DEFAULT_CONFIG, maxSpeed: 20, foodGrowthRate: 0.05, lifespan: 10000, agingRate: 0.2, foodEnergy: 150, creatureTheme: 'fire-and-ice', matingUrgeRate: 0.0001, reproductionCooldown: 1000},
+            "Blink & You'll Miss It": {...DEFAULT_CONFIG, lifespan: 300, agingRate: 3, baseMutationRate: 0.2, brainMutationRate: 0.2, environmentalToxicity: 0.3, reproductionType: 'asexual', reproductionCooldown: 50},
+            "Garden of Eden": {...DEFAULT_CONFIG, colorDifferenceThreshold: 180, environmentalToxicity: 0, foodGrowthRate: 1, foodReproductionThreshold: 50, creatureTheme: 'pastel'},
+            "The Swarm": {...DEFAULT_CONFIG, maxCreatures: 3000, initialCreatureCount: 3000, herdingInstinct: 1.5, foodEnergy: 10, creatureTheme: 'blood-moon', reproductionCooldown: 50, matingUrgeRate: 0.005, massDrag: 0},
+            "Heavyweights": {...DEFAULT_CONFIG, massDrag: 0.1, initialEnergy: 200, maxEnergy: 3000, foodEnergy: 150, creatureTheme: 'geode'},
+            "Featherweights": {...DEFAULT_CONFIG, massDrag: 0, maxSpeed: 100, foodEnergy: 10, maxFoodItems: 1000, environmentalToxicity: 0.1, creatureTheme: 'jungle'},
+            "Metropolis": {...DEFAULT_CONFIG, initialCreatureCount: 2000, maxCreatures: 4000, environmentalToxicity: 0.4, foodSpawnInterval: 50, creatureTheme: 'grayscale'}
+        };
+        const SETTINGS_SCHEMA=[
+            {tab:'general', name:'Max Creatures', key:'maxCreatures', type:'range', min:100, max:10000, step:100, tooltip: "The maximum number of creatures allowed in the simulation."},
+            {tab:'general', name:'Max Food', key:'maxFoodItems', type:'range', min:100, max:5000, step:100, tooltip: "The maximum number of food items available in the world."},
+            {tab:'general', name:'Initial Creatures', key:'initialCreatureCount', type:'range', min:10, max:10000, step:10, tooltip: "How many creatures to start with. Resets population on change."},
+            {tab:'evolution', name:'Reproduction Method', key:'reproductionType', type:'select', options:['both', 'asexual', 'sexual'], tooltip: "Asexual: high-energy budding. Sexual: requires a partner. Both: allows both methods."},
+            {tab:'evolution', name:'Mating Urge Rate', key:'matingUrgeRate', type:'range', min:0, max:0.01, step:0.0001, tooltip: "How quickly the desire to mate builds up. Higher values mean more frequent attempts."},
+            {tab:'evolution', name:'Reproduction Cooldown', key:'reproductionCooldown', type:'range', min:0, max:1000, step:10, tooltip: "The number of frames a creature must wait before it can reproduce again."},
+            {tab:'evolution', name:'Hostility (Color Difference)', key:'colorDifferenceThreshold', type:'range', min:1, max:180, step:1, tooltip: "How different a creature's color must be to be considered prey/predator. Low values mean more aggression."},
+            {tab:'evolution', name:'Offspring Energy Fraction', key:'offspringEnergyFraction', type:'range', min:0.1, max:0.9, step:0.05, tooltip: "The percentage of a parent's energy given to its offspring upon reproduction."},
+            {tab:'evolution', name:'Lifespan (Vitality)', key:'lifespan', type:'range', min:200, max:10000, step:100, tooltip: "Total vitality a creature has. It dies when its age (affected by Aging Rate) exceeds this."},
+            {tab:'evolution', name:'Aging Logic', key:'agingLogic', type:'select', options:['linear', 'gradual'], tooltip: "'Linear': No penalties for age. 'Gradual': Performance declines in old age."},
+            {tab:'evolution', name:'Aging Rate Mutation', key:'agingRateMutation', type:'range', min:0, max:0.5, step:0.01, tooltip: "Rate at which the speed of aging mutates."},
+            {tab:'evolution', name:'Speed Mutation', key:'speedMutationRate', type:'range', min:0, max:0.5, step:0.01, tooltip: "The rate at which a creature's maximum speed can mutate."},
+            {tab:'evolution', name:'Vision Mutation', key:'visionMutationRate', type:'range', min:0, max:0.5, step:0.01, tooltip: "The rate at which a creature's vision range can mutate."},
+            {tab:'evolution', name:'Energy Loss Mutation', key:'energyLossMutationRate', type:'range', min:0, max:0.5, step:0.01, tooltip: "The rate at which a creature's energy loss from movement can mutate."},
+            {tab:'evolution', name:'Bravery Mutation', key:'braveryMutationRate', type:'range', min:0, max:0.5, step:0.01, tooltip: "Rate at which bravery/cowardice mutates."},
+             {tab:'evolution', name:'Size Mutation', key:'sizeMutationRate', type:'range', min:0, max:0.5, step:0.01, tooltip: "The rate at which a creature's size-to-energy ratio can mutate."},
+             {tab:'evolution', name:'Mass Drag Mutation', key:'massDragMutationRate', type:'range', min:0, max:0.5, step:0.01, tooltip: "Rate at which a creature's mass drag mutates."},
+            {tab:'brain', name:'Herding Instinct', key:'herdingInstinct', type:'range', min:-1, max:1, step:0.1, tooltip: "How strongly creatures are attracted (positive) or repulsed (negative) by their kin."},
+            {tab:'brain', name:'Brain Mutation Rate', key:'brainMutationRate', type:'range', min:0, max:1, step:0.01, tooltip: "How much a creature's brain can change when it reproduces."},
+            {tab:'brain', name:'Brain Mutation Chance', key:'brainMutationChance', type:'range', min:0, max:1, step:0.05, tooltip: "The probability that any single weight or bias in the brain will mutate."},
+            {tab:'brain', name:'Hidden Layers', key:'hiddenLayers', type:'range', min:0, max:4, step:1, tooltip: "Number of hidden layers in the neural network. Resets population on change."},
+            {tab:'brain', name:'Neurons Per Layer', key:'neuronsPerLayer', type:'range', min:2, max:16, step:1, tooltip: "Number of neurons in each hidden layer. Resets population on change."},
+            {tab:'brain', name:'Activation Function', key:'activationFunction', type:'select', options:['sigmoid','tanh','relu'], tooltip: "The function that determines a neuron's output."},
+            {tab:'physics', name:'Initial Energy', key:'initialEnergy', type:'range', min:10, max:1000, step:10, tooltip: "Energy of newly spawned creatures. Resets population on change."},
+            {tab:'physics', name:'Max Energy', key:'maxEnergy', type:'range', min:500, max:10000, step:100, tooltip: "The maximum energy a creature can store."},
+            {tab:'physics', name:'Size Multiplier', key:'sizeEnergyMultiplier', type:'range', min:0.1, max:5, step:0.1, tooltip: "Affects how large a creature is relative to its energy level."},
+            {tab:'physics', name:'Max Speed', key:'maxSpeed', type:'range', min:10, max:200, step:5, tooltip: "The absolute maximum speed a creature can achieve."},
+            {tab:'physics', name:'Mass Drag', key:'massDrag', type:'range', min:0, max:0.2, step:0.005, tooltip: "How much a creature's size slows it down. Higher values mean larger creatures are much slower."},
+            {tab:'physics', name:'Energy Loss From Movement', key:'baseEnergyLossRate', type:'range', min:0, max:0.5, step:0.01, tooltip: "Base energy cost for movement. Higher values make movement more costly."},
+            {tab:'physics', name:'Allowed Overlap', key:'allowOverlapPercentage', type:'range', min:0, max:0.9, step:0.05, tooltip: "How much creatures can overlap before being pushed apart. Higher values allow for denser clusters."},
+            {tab:'world', name:'Food Energy', key:'foodEnergy', type:'range', min:5, max:500, step:5, tooltip: "The amount of energy provided by a single piece of food."},
+            {tab:'world', name:'Food Growth Rate', key:'foodGrowthRate', type:'range', min:0, max:1, step:0.05, tooltip: "How quickly food regrows to its full energy value. 0 means it never regrows."},
+            {tab:'world', name:'Food Spawn Interval (ms)', key:'foodSpawnInterval', type:'range', min:50, max:2000, step:50, tooltip: "How often a new piece of food can spawn."},
+            {tab:'world', name:'Food Reproduction Threshold', key:'foodReproductionThreshold', type:'range', min:50, max:500, step:10, tooltip: "Energy level at which food will spawn a new food item."},
+            {tab:'world', name:'Food Overlap', key:'foodOverlapPercentage', type:'range', min:0, max:0.9, step:0.05, tooltip: "How much food items can overlap before being pushed apart."},
+            {tab:'world', name:'Food Max Speed', key:'foodMaxSpeed', type:'range', min:0, max:2, step:0.1, tooltip: "The maximum speed for drifting food items."},
+            {tab:'world', name:'Food Energy Mutation', key:'foodEnergyMutationRate', type:'range', min:0, max:0.5, step:0.01, tooltip: "Mutation rate for food's max energy trait."},
+            {tab:'world', name:'Food Speed Mutation', key:'foodSpeedMutationRate', type:'range', min:0, max:0.5, step:0.01, tooltip: "Mutation rate for food's speed multiplier trait."},
+            {tab:'world', name:'Environmental Toxicity', key:'environmentalToxicity', type:'range', min:0, max:1, step:0.01, tooltip: "A constant energy drain on all creatures, simulating a harsh environment."},
+            {tab:'world', name:'World Bounds', key:'worldBounds', type:'select', options:['wrap', 'wall'], tooltip: "'Wrap': Creatures go off one side and appear on the other. 'Wall': Creatures bounce off the edges of the world."},
+            {tab:'visuals', name:'Creature Body Style', key:'creatureBodyStyle', type:'select', options:['cellular', 'solid', 'ring', 'comet'], tooltip: "The visual style of the creature's body."},
+            {tab:'visuals', name:'King Aura Style', key:'kingAuraStyle', type:'select', options:['pulsing', 'static', 'electric'], tooltip: "The visual effect for the largest creature's aura."},
+            {tab:'visuals', name:'Creature Color Theme', key:'creatureTheme', type:'select', options: Object.keys(COLOR_THEMES), tooltip: "Applies a dynamic visual theme to all creature colors by remapping their family hue."},
+            {tab:'visuals', name:'Creature Size Scaling', key:'creatureSizeScaling', type:'select', options: ['energy-based', 'logarithmic'], tooltip: "'Energy-Based': Size is sqrt(energy). 'Logarithmic': Size grows slower at high energy, preventing huge creatures."},
+            {tab:'visuals', name:'Food Color', key:'foodColor', type:'color', tooltip: "The color of the food items."},
+            {tab:'visuals', name:'Food Style', key:'foodStyle', type:'select', options:['solid', 'ring'], tooltip: "How the food is drawn: as a solid circle or an empty ring."},
+            {tab:'visuals', name:'Food Blinking', key:'foodBlinks', type:'select', options:[true, false]},
+            {tab:'visuals', name:'Food Size Scaling', key:'foodSizeScaling', type:'select', options:['energy-based', 'fixed'], tooltip: "How food size is determined."},
+            {tab:'visuals', name:'Show Vision Ranges', key:'showVisionRanges', type:'select', options:[true, false], tooltip: "Draws a circle around each creature representing its vision range. Can impact performance."},
+            {tab:'interaction', name:'Interaction Mode', key:'interactionMode', type:'select', options:['observe', 'feed', 'kill', 'mutate', 'spawn-creature'], tooltip: "Changes what happens when you click on the canvas."}
+        ];
+        
+        function setupSettingsMenu() {
+            const sb = document.getElementById('settings-body'); sb.innerHTML = '';
+            document.querySelectorAll('.tab-content').forEach(t => t.remove());
+            const tabs = {};
+            SETTINGS_SCHEMA.forEach(s => {
+                if (!tabs[s.tab]) { tabs[s.tab] = document.createElement('div'); tabs[s.tab].className = 'tab-content'; tabs[s.tab].dataset.tab = s.tab; sb.appendChild(tabs[s.tab]); }
+                const i = document.createElement('div'); i.className = 'setting-item';
+                const l = document.createElement('label'); l.textContent = s.name; l.htmlFor = `s-${s.key}`;
+                if (s.tooltip) l.dataset.tooltip = s.tooltip;
+                const w = document.createElement('div');
+                let ctrl;
+                if (s.type === 'range') {
+                    ctrl = document.createElement('input'); ctrl.type = 'range'; ctrl.min = s.min; ctrl.max = s.max; ctrl.step = s.step;
+                    const v = document.createElement('span'); v.className = 'value-display';
+                    ctrl.addEventListener('input', () => { v.textContent = ctrl.value; });
+                    w.append(ctrl, v);
+                } else if (s.type === 'select') {
+                    ctrl = document.createElement('select');
+                    s.options.forEach(o => {
+                        const opt = document.createElement('option'); opt.value = o;
+                        let text = String(o).replace(/-/g, ' ');
+                        if (text === 'true') text = 'On'; if (text === 'false') text = 'Off';
+                        opt.textContent = text.charAt(0).toUpperCase() + text.slice(1);
+                        ctrl.appendChild(opt);
+                    });
+                    w.appendChild(ctrl);
+                } else if (s.type === 'color' || s.type === 'text') {
+                    ctrl = document.createElement('input'); ctrl.type = s.type;
+                    w.appendChild(ctrl);
+                }
+                ctrl.id = `s-${s.key}`;
+                ctrl.addEventListener('input', () => {
+                    let value = ctrl.value;
+                    if (s.type === 'range') value = parseFloat(value);
+                    else if (s.options && (value === 'true' || value === 'false')) value = (value === 'true');
+                    CONFIG[s.key] = value;
+                    if (['hiddenLayers', 'neuronsPerLayer', 'initialCreatureCount'].includes(s.key)) resetPopulation();
+                    saveConfigToLocalStorage();
+                });
+                i.append(l, w); tabs[s.tab].appendChild(i);
+            });
+            document.querySelector('.tab-content[data-tab="general"]').classList.add('active');
+            updateSettingsInputs();
+        }
+        function updateSettingsInputs(){SETTINGS_SCHEMA.forEach(s=>{const el=document.getElementById(`s-${s.key}`);if(el){el.value=CONFIG[s.key];if(s.type==='range')el.nextElementSibling.textContent=el.value;}});}
+        document.querySelectorAll('.tab-button').forEach(b=>{b.addEventListener('click',()=>{document.querySelectorAll('.tab-button,.tab-content').forEach(e=>e.classList.remove('active'));b.classList.add('active');document.querySelector(`.tab-content[data-tab="${b.dataset.tab}"]`).classList.add('active');});});
+        
+        function saveConfigToLocalStorage() { localStorage.setItem('evolutionSimConfig_v7', JSON.stringify(CONFIG)); }
+        function loadConfigFromLocalStorage() {
+            const savedConfig = localStorage.getItem('evolutionSimConfig_v7');
+            if (savedConfig) {
+                try {
+                    const parsedConfig = JSON.parse(savedConfig);
+                    if (parsedConfig.maxCreatures > 5000) parsedConfig.maxCreatures = 5000;
+                    if (parsedConfig.maxFoodItems > 5000) parsedConfig.maxFoodItems = 5000;
+                    CONFIG = Object.assign({}, DEFAULT_CONFIG, parsedConfig);
+                } catch(e) { CONFIG = {...DEFAULT_CONFIG}; }
+            }
+        }
+        function saveState(){const state={config:CONFIG,creatures:creatures.map(c=>({...c,brain:c.brain, parent: null})),food:foodItems};const blob=new Blob([JSON.stringify(state, (k,v) => (k === 'brain' && v.levels) ? {levels: v.levels} : v, 2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`evolution-sim-save-${Date.now()}.json`;a.click();URL.revokeObjectURL(a.href);}
+        function loadState(e){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=event=>{try{const state=JSON.parse(event.target.result);CONFIG=Object.assign({},DEFAULT_CONFIG, state.config);creatures=state.creatures.map(cData=>{cData.brain=Object.assign(new NeuralNetwork([]), cData.brain); return new Creature(cData.x,cData.y,cData)});foodItems=state.food.map(fData=>new Food(fData.x,fData.y,fData));kingCreature=null;lastClickedCreature=null;updateSettingsInputs();}catch(err){console.error('Error loading file.',err);}};reader.readAsText(file);e.target.value='';}
+        function setupPresets(){const sel=uiElements.presetsSelect;sel.innerHTML='';Object.keys(PRESETS).forEach(name=>{const opt=document.createElement('option');opt.value=name;opt.textContent=name;sel.appendChild(opt);});sel.addEventListener('change',e=>{CONFIG={...PRESETS[e.target.value]};updateSettingsInputs();saveConfigToLocalStorage();resetPopulation()});}
+        
+        // --- EVENT LISTENERS ---
+        uiElements.settingsToggleButton.addEventListener('click',()=>uiElements.settingsPanel.classList.toggle('open'));
+        uiElements.saveBtn.addEventListener('click',saveState);
+        uiElements.loadInput.addEventListener('change',loadState);
+        uiElements.loadBtn.addEventListener('click',()=>uiElements.loadInput.click());
+        uiElements.resetPopBtn.addEventListener('click',resetPopulation);
+        uiElements.resetSettingsBtn.addEventListener('click',()=>{CONFIG={...DEFAULT_CONFIG};updateSettingsInputs();saveConfigToLocalStorage();});
+        uiElements.fullResetBtn.addEventListener('click',()=>{CONFIG={...DEFAULT_CONFIG};updateSettingsInputs();saveConfigToLocalStorage();resetPopulation();});
+        canvas.addEventListener('mousedown',handleInteractionStart);canvas.addEventListener('mousemove',handleInteractionMove);canvas.addEventListener('mouseup',handleInteractionEnd);canvas.addEventListener('touchstart',handleInteractionStart,{passive:false});canvas.addEventListener('touchmove',handleInteractionMove,{passive:false});canvas.addEventListener('touchend',handleInteractionEnd);
+        
+        // --- INITIALIZE & RUN ---
+        loadConfigFromLocalStorage();
+        resizeCanvas();
+        initialSpawn();
+        setupSettingsMenu();
+        setupPresets();
+        updateSettingsInputs();
+        requestAnimationFrame(evolve);
+    </script>
+</body>
+</html>
