@@ -163,33 +163,73 @@
         // --- DEFAULTS & CONFIGURATION ---
         const DEFAULT_CONFIG = Object.freeze({
             // General
-            maxCreatures: 1000, maxFoodItems: 2000, minCreatures: 100, minFoodItems: 200,
-            initialCreatureCount: 1000,
+            maxCreatures: 5000,
+            maxFoodItems: 2000,
+            minCreatures: 100,
+            minFoodItems: 200,
+            initialCreatureCount: 120,
             // Evolution
-            reproductionType: 'both', matingUrgeRate: 0.001, reproductionCooldown: 200,
-            offspringEnergyFraction: 0.5, colorDifferenceThreshold: 36, lifespan: 2000,
-            agingLogic: 'linear',
-            agingRateMutation: 0.05, baseMutationRate: 0.05, speedMutationRate: 0.05, visionMutationRate: 0.05, 
-            energyLossMutationRate: 0.05, sizeMutationRate: 0.05, braveryMutationRate: 0.05, massDragMutationRate: 0.05,
+            reproductionType: "both",
+            matingUrgeRate: 0.01,
+            reproductionCooldown: 0,
+            offspringEnergyFraction: 0.15,
+            colorDifferenceThreshold: 36,
+            lifespan: 6000,
+            agingLogic: "gradual",
+            agingRateMutation: 0.05,
+            baseMutationRate: 0.05,
+            speedMutationRate: 0.05,
+            visionMutationRate: 0.05,
+            energyLossMutationRate: 0.05,
+            sizeMutationRate: 0.05,
+            braveryMutationRate: 0.05,
+            massDragMutationRate: 0.05,
             // Brain
-            brainMutationRate: 0.1, brainMutationChance: 0.5, hiddenLayers: 1, neuronsPerLayer: 8,
-            activationFunction: 'tanh', herdingInstinct: 0.5,
+            brainMutationRate: 0.2,
+            brainMutationChance: 0.25,
+            hiddenLayers: 4,
+            neuronsPerLayer: 16,
+            activationFunction: "tanh",
+            herdingInstinct: 1,
+            memoryCells: 4,
             // Physics
-            initialEnergy: 100, maxEnergy: 2000,
-            maxSpeed: 50, maxAcceleration: 20, baseEnergyLossRate: 0.1, sizeEnergyMultiplier: 1,
-            pushForce: 0.5, allowOverlapPercentage: 0.25, massDrag: 0.01,
+            initialEnergy: 100,
+            maxEnergy: 2000,
+            maxSpeed: 50,
+            maxAcceleration: 20,
+            baseEnergyLossRate: 0.1,
+            sizeEnergyMultiplier: 0.4,
+            pushForce: 0.5,
+            allowOverlapPercentage: 0.25,
+            massDrag: 0.01,
             // World
-            foodEnergy: 20, foodGrowthRate: 0.2, foodSpawnInterval: 100, environmentalToxicity: 0,
-            worldBounds: 'wrap', foodReproductionThreshold: 100, foodOverlapPercentage: 0.25,
-            foodMaxSpeed: 0.2, foodEnergyMutationRate: 0.05, foodSpeedMutationRate: 0.05,
+            foodEnergy: 60,
+            foodGrowthRate: 0.2,
+            foodSpawnInterval: 100,
+            environmentalToxicity: 0.1,
+            worldBounds: "wrap",
+            foodReproductionThreshold: 100,
+            foodOverlapPercentage: 0.2,
+            foodMaxSpeed: 0.2,
+            foodEnergyMutationRate: 0.05,
+            foodSpeedMutationRate: 0.05,
             // Visuals
-            foodColor: '#FFFFFF', foodStyle: 'ring', foodBlinks: false, foodSizeScaling: 'energy-based',
-            showVisionRanges: false, creatureTheme: 'normal', creatureSizeScaling: 'energy-based',
-            creatureBodyStyle: 'cellular', kingAuraStyle: 'pulsing',
+            foodColor: "#9c9c9c",
+            foodStyle: "ring",
+            foodBlinks: false,
+            foodSizeScaling: "energy-based",
+            showVisionRanges: false,
+            creatureTheme: "normal",
+            creatureSizeScaling: "energy-based",
+            creatureBodyStyle: "ring",
+            kingAuraStyle: "static",
             // Interaction
-            interactionMode: 'observe',
+            interactionMode: "observe",
             // Internal
-            spatialGridCellSize: 100, minFoodSize: 0.2, absorptionRate: 5, visionRangeFactor: 10,
+            spatialGridCellSize: 100,
+            minFoodSize: 0.2,
+            absorptionRate: 5,
+            visionRangeFactor: 10,
         });
         let CONFIG = { ...DEFAULT_CONFIG };
 
@@ -350,7 +390,7 @@
                 ctx.arc(x, y, this.size, 0, 2 * Math.PI);
                 let styleColor = CONFIG.foodColor;
                  if (CONFIG.foodBlinks) {
-                    ctx.globalAlpha = 0.6 + Math.sin(time / 200) * 0.4;
+                     ctx.globalAlpha = 0.6 + Math.sin(time / 200) * 0.4;
                 }
                 if(CONFIG.foodStyle === 'ring'){
                     ctx.strokeStyle = styleColor; ctx.lineWidth = 2; ctx.stroke();
@@ -416,8 +456,15 @@
                 this.visionRangeFactor = traits.visionRangeFactor || mutateValue(CONFIG.visionRangeFactor, CONFIG.visionMutationRate);
                 this.bravery = traits.bravery || mutateValue(0.5, CONFIG.braveryMutationRate);
                 this.massDrag = traits.massDrag || mutateValue(CONFIG.massDrag, CONFIG.massDragMutationRate);
+
+                // --- NEW: Memory implementation ---
+                this.memory = new Array(CONFIG.memoryCells).fill(0);
+                this.nextMemory = new Array(CONFIG.memoryCells).fill(0);
                 
-                const brainStructure = [10, ...Array(CONFIG.hiddenLayers).fill(CONFIG.neuronsPerLayer), 4];
+                // --- MODIFIED: Brain structure adapts to memory cells ---
+                const inputCount = 10 + CONFIG.memoryCells;
+                const outputCount = 4 + CONFIG.memoryCells;
+                const brainStructure = [inputCount, ...Array(CONFIG.hiddenLayers).fill(CONFIG.neuronsPerLayer), outputCount];
                 this.brain=traits.brain||new NeuralNetwork(brainStructure, true);
                 
                 this.updateSizeAndVision();
@@ -441,6 +488,7 @@
                 let wallDistY = Math.min(this.y, canvas.height - this.y);
                 let wallDist = Math.min(wallDistX, wallDistY);
 
+                // --- MODIFIED: NN inputs now include memory ---
                 const inputs=[
                     this.energy/this.maxEnergy, 
                     this.age/this.lifespan, 
@@ -448,7 +496,8 @@
                     this.speed / this.maxSpeed,
                     (CONFIG.worldBounds === 'wall') ? (wallDist / (canvas.width/2)) : 1,
                     this.massDrag,
-                    0,0,0,0
+                    0,0,0,0, // Vision placeholders
+                    ...this.memory // Add current memory state to inputs
                 ];
                 const visionSq=this.visionRange**2;
                 let nearest={food:null, prey:null, danger:null, mate:null}; 
@@ -489,7 +538,11 @@
                     inputs[9] = (1 - avgKinDist / this.visionRange) * CONFIG.herdingInstinct;
                 }
                 
-                const[forward, turn, wantsToMate, wantsToSprint] = NeuralNetwork.feedForward(inputs, this.brain);
+                // --- MODIFIED: NN outputs now include new memory values ---
+                const outputs = NeuralNetwork.feedForward(inputs, this.brain);
+                const [forward, turn, wantsToMate, wantsToSprint] = outputs;
+                this.nextMemory = outputs.slice(4); // The rest of the outputs are the new memory values
+
                 this.acceleration = lerp(-this.maxAcceleration * 0.5, this.maxAcceleration, forward);
                 this.wantsToSprint = wantsToSprint > 0.7;
 
@@ -519,6 +572,9 @@
 
                 this.think();
                 
+                // --- NEW: Update memory state for the next tick ---
+                this.memory = this.nextMemory;
+
                 this.age += this.agingRate;
                 this.reproductionCooldown = Math.max(0, this.reproductionCooldown - 1);
                 this.matingUrge = Math.min(1, this.matingUrge + (CONFIG.matingUrgeRate * (this.energy / this.maxEnergy)));
@@ -554,7 +610,7 @@
                 
                 if (this.energy <= 0 || this.age > this.lifespan) this.alive = false;
 
-                if (CONFIG.reproductionType !== 'sexual' && this.energy > this.reproductionThreshold && this.reproductionCooldown <= 0) {
+                if (CONFIG.reproductionType !== 'asexual' && this.energy > this.reproductionThreshold && this.reproductionCooldown <= 0) {
                     this.reproduce();
                 }
             }
@@ -659,7 +715,7 @@
             }
 
             _drawAt(x, y, time) {
-                 if(CONFIG.showVisionRanges){
+                if(CONFIG.showVisionRanges){
                     ctx.beginPath();ctx.arc(x,y,this.visionRange,0,2*Math.PI);
                     ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;ctx.stroke();
                 }
@@ -953,6 +1009,7 @@
             {tab:'evolution', name:'Bravery Mutation', key:'braveryMutationRate', type:'range', min:0, max:0.5, step:0.01, tooltip: "Rate at which bravery/cowardice mutates."},
              {tab:'evolution', name:'Size Mutation', key:'sizeMutationRate', type:'range', min:0, max:0.5, step:0.01, tooltip: "The rate at which a creature's size-to-energy ratio can mutate."},
              {tab:'evolution', name:'Mass Drag Mutation', key:'massDragMutationRate', type:'range', min:0, max:0.5, step:0.01, tooltip: "Rate at which a creature's mass drag mutates."},
+            {tab:'brain', name:'Memory Cells', key:'memoryCells', type:'range', min:0, max:4, step:1, tooltip: "Number of internal memory neurons. Allows creatures to retain state between frames. Resets population on change."},
             {tab:'brain', name:'Herding Instinct', key:'herdingInstinct', type:'range', min:-1, max:1, step:0.1, tooltip: "How strongly creatures are attracted (positive) or repulsed (negative) by their kin."},
             {tab:'brain', name:'Brain Mutation Rate', key:'brainMutationRate', type:'range', min:0, max:1, step:0.01, tooltip: "How much a creature's brain can change when it reproduces."},
             {tab:'brain', name:'Brain Mutation Chance', key:'brainMutationChance', type:'range', min:0, max:1, step:0.05, tooltip: "The probability that any single weight or bias in the brain will mutate."},
@@ -1024,7 +1081,10 @@
                     if (s.type === 'range') value = parseFloat(value);
                     else if (s.options && (value === 'true' || value === 'false')) value = (value === 'true');
                     CONFIG[s.key] = value;
-                    if (['hiddenLayers', 'neuronsPerLayer', 'initialCreatureCount'].includes(s.key)) resetPopulation();
+                    // --- MODIFIED: Changing memory cells also resets population ---
+                    if (['hiddenLayers', 'neuronsPerLayer', 'initialCreatureCount', 'memoryCells'].includes(s.key)) {
+                        resetPopulation();
+                    }
                     saveConfigToLocalStorage();
                 });
                 i.append(l, w); tabs[s.tab].appendChild(i);
@@ -1035,9 +1095,9 @@
         function updateSettingsInputs(){SETTINGS_SCHEMA.forEach(s=>{const el=document.getElementById(`s-${s.key}`);if(el){el.value=CONFIG[s.key];if(s.type==='range')el.nextElementSibling.textContent=el.value;}});}
         document.querySelectorAll('.tab-button').forEach(b=>{b.addEventListener('click',()=>{document.querySelectorAll('.tab-button,.tab-content').forEach(e=>e.classList.remove('active'));b.classList.add('active');document.querySelector(`.tab-content[data-tab="${b.dataset.tab}"]`).classList.add('active');});});
         
-        function saveConfigToLocalStorage() { localStorage.setItem('evolutionSimConfig_v7', JSON.stringify(CONFIG)); }
+        function saveConfigToLocalStorage() { localStorage.setItem('evolutionSimConfig_v8', JSON.stringify(CONFIG)); }
         function loadConfigFromLocalStorage() {
-            const savedConfig = localStorage.getItem('evolutionSimConfig_v7');
+            const savedConfig = localStorage.getItem('evolutionSimConfig_v8');
             if (savedConfig) {
                 try {
                     const parsedConfig = JSON.parse(savedConfig);
