@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GrowHub Multi-Chart Visualizer</title>
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js for charting -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Chart.js adapter for time series, using date-fns -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    
+    <!-- Chart.js annotation plugin for optimal range bands -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+
+    <!-- PapaParse for easy CSV parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+    <style>
+        /* Custom font and dark theme styling */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827; /* gray-900 */
+            color: #f3f4f6; /* gray-100 */
+        }
+        .chart-container {
+            position: relative;
+            height: 35vh;
+            width: 100%;
+            background-color: #1f2937; /* gray-800 */
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .file-input-button {
+            background-color: #3b82f6;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .file-input-button:hover {
+            background-color: #2563eb;
+        }
+        /* Styling for settings panel */
+        .settings-input {
+            background-color: #374151; /* gray-700 */
+            border: 1px solid #4b5563; /* gray-600 */
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+            width: 80px;
+        }
+        .settings-select {
+            background-color: #374151; /* gray-700 */
+            border: 1px solid #4b5563; /* gray-600 */
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+            width: 100%;
+        }
+        /* Simple transition for collapsible panel */
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 id="main-title" class="text-3xl md:text-4xl font-bold text-white">Grow Tent Environment</h1>
+            <p class="text-gray-400 mt-2">Upload your Vivosun GrowHub CSV to see your data.</p>
+        </header>
+
+        <!-- Controls: File Input -->
+        <div class="flex flex-col items-center justify-center gap-4 mb-6">
+            <div>
+                <label for="csvFile" class="file-input-button font-medium">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
+                    Upload CSV File
+                </label>
+                <input type="file" id="csvFile" class="hidden" accept=".csv">
+            </div>
+        </div>
+
+        <!-- Settings Panel (Collapsible) -->
+        <div id="settings-panel" class="bg-gray-800 rounded-lg mb-8 hidden">
+            <button id="settings-toggle" class="w-full text-left p-4 font-semibold text-lg flex justify-between items-center">
+                <span>Chart Settings</span>
+                <svg id="settings-chevron" class="w-6 h-6 transition-transform transform" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+            </button>
+            <div id="settings-content" class="collapsible-content px-4 pb-4">
+                <div class="border-t border-gray-700 pt-4">
+                    <!-- Presets Section -->
+                    <div class="mb-6">
+                        <label for="presets" class="block font-semibold text-gray-300 mb-2">Growth Stage Presets</label>
+                        <select id="presets" class="settings-select">
+                            <option value="vegetative">Vegetative</option>
+                            <option value="seedling">Seedling / Clone</option>
+                            <option value="flowering">Flowering</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Range Settings -->
+                        <div class="space-y-4">
+                            <h3 class="font-semibold text-gray-300">Optimal Ranges</h3>
+                            <div class="flex items-center justify-between">
+                                <label for="tempDayMin">Day Temp (°F)</label>
+                                <div><input type="number" id="tempDayMin" class="settings-input"> - <input type="number" id="tempDayMax" class="settings-input"></div>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <label for="tempNightMin">Night Temp (°F)</label>
+                                <div><input type="number" id="tempNightMin" class="settings-input"> - <input type="number" id="tempNightMax" class="settings-input"></div>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <label for="humidityMin">Humidity (%)</label>
+                                <div><input type="number" id="humidityMin" class="settings-input"> - <input type="number" id="humidityMax" class="settings-input"></div>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <label for="vpdMin">VPD (kPa)</label>
+                                <div><input type="number" step="0.1" id="vpdMin" class="settings-input"> - <input type="number" step="0.1" id="vpdMax" class="settings-input"></div>
+                            </div>
+                        </div>
+                        <!-- Display Settings -->
+                        <div class="space-y-4">
+                            <h3 class="font-semibold text-gray-300">Display</h3>
+                            <div class="flex items-center justify-between">
+                                <label for="toggleRanges">Show Ideal Ranges</label>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="toggleRanges" class="sr-only peer" checked>
+                                    <div class="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-6 text-right">
+                        <button id="apply-settings" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors">Apply Settings</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart Area -->
+        <div id="charts-area" class="w-full hidden">
+            <div class="chart-container"><canvas id="tempChart"></canvas></div>
+            <div class="chart-container"><canvas id="humidityChart"></canvas></div>
+            <div class="chart-container"><canvas id="vpdChart"></canvas></div>
+        </div>
+        
+        <div id="initial-message" class="text-center p-12 bg-gray-800 rounded-lg">
+            <p class="text-lg text-gray-400">Please upload your GrowHub CSV file to begin.</p>
+        </div>
+
+    </div>
+
+    <script>
+        // --- Global State ---
+        let chartInstances = { temp: null, humidity: null, vpd: null };
+        let parsedData = null;
+        let showRanges = true;
+
+        // --- DOM Elements ---
+        const fileInput = document.getElementById('csvFile');
+        const initialMessage = document.getElementById('initial-message');
+        const chartsArea = document.getElementById('charts-area');
+        const mainTitle = document.getElementById('main-title');
+        const settingsPanel = document.getElementById('settings-panel');
+        const settingsToggle = document.getElementById('settings-toggle');
+        const settingsContent = document.getElementById('settings-content');
+        const settingsChevron = document.getElementById('settings-chevron');
+        const applyBtn = document.getElementById('apply-settings');
+        const toggleRangesCheckbox = document.getElementById('toggleRanges');
+        const presetsSelect = document.getElementById('presets');
+
+        // --- Input fields ---
+        const inputs = {
+            tempDayMin: document.getElementById('tempDayMin'),
+            tempDayMax: document.getElementById('tempDayMax'),
+            tempNightMin: document.getElementById('tempNightMin'),
+            tempNightMax: document.getElementById('tempNightMax'),
+            humidityMin: document.getElementById('humidityMin'),
+            humidityMax: document.getElementById('humidityMax'),
+            vpdMin: document.getElementById('vpdMin'),
+            vpdMax: document.getElementById('vpdMax')
+        };
+
+        // --- Preset Values ---
+        const PRESETS = {
+            seedling: { tempDay: { min: 72, max: 80 }, tempNight: { min: 68, max: 75 }, humidity: { min: 70, max: 80 }, vpd: { min: 0.4, max: 0.8 } },
+            vegetative: { tempDay: { min: 75, max: 82 }, tempNight: { min: 70, max: 75 }, humidity: { min: 60, max: 70 }, vpd: { min: 0.8, max: 1.2 } },
+            flowering: { tempDay: { min: 68, max: 78 }, tempNight: { min: 65, max: 72 }, humidity: { min: 40, max: 50 }, vpd: { min: 1.2, max: 1.6 } },
+            custom: {}
+        };
+
+        let OPTIMAL_RANGES = { ...PRESETS.vegetative }; // Default to vegetative
+
+        // --- Event Listeners ---
+        fileInput.addEventListener('change', handleFileSelect);
+        settingsToggle.addEventListener('click', toggleSettingsPanel);
+        applyBtn.addEventListener('click', applySettings);
+        presetsSelect.addEventListener('change', handlePresetChange);
+        Object.values(inputs).forEach(input => input.addEventListener('input', () => presetsSelect.value = 'custom'));
+
+        /**
+         * Toggles the settings panel visibility.
+         */
+        function toggleSettingsPanel() {
+            if (settingsContent.style.maxHeight) {
+                settingsContent.style.maxHeight = null;
+                settingsChevron.classList.remove('rotate-180');
+            } else {
+                settingsContent.style.maxHeight = settingsContent.scrollHeight + "px";
+                settingsChevron.classList.add('rotate-180');
+            }
+        }
+
+        /**
+         * Loads a preset's values into the OPTIMAL_RANGES and updates the input fields.
+         */
+        function handlePresetChange() {
+            const selectedPreset = presetsSelect.value;
+            if (selectedPreset !== 'custom') {
+                OPTIMAL_RANGES = { ...PRESETS[selectedPreset] };
+                populateSettingsInputs();
+            }
+        }
+        
+        /**
+         * Populates settings inputs with current OPTIMAL_RANGES values.
+         */
+        function populateSettingsInputs() {
+            inputs.tempDayMin.value = OPTIMAL_RANGES.tempDay.min;
+            inputs.tempDayMax.value = OPTIMAL_RANGES.tempDay.max;
+            inputs.tempNightMin.value = OPTIMAL_RANGES.tempNight.min;
+            inputs.tempNightMax.value = OPTIMAL_RANGES.tempNight.max;
+            inputs.humidityMin.value = OPTIMAL_RANGES.humidity.min;
+            inputs.humidityMax.value = OPTIMAL_RANGES.humidity.max;
+            inputs.vpdMin.value = OPTIMAL_RANGES.vpd.min;
+            inputs.vpdMax.value = OPTIMAL_RANGES.vpd.max;
+            toggleRangesCheckbox.checked = showRanges;
+        }
+
+        /**
+         * Reads values from settings inputs and redraws charts.
+         */
+        function applySettings() {
+            OPTIMAL_RANGES.tempDay.min = parseFloat(inputs.tempDayMin.value);
+            OPTIMAL_RANGES.tempDay.max = parseFloat(inputs.tempDayMax.value);
+            OPTIMAL_RANGES.tempNight.min = parseFloat(inputs.tempNightMin.value);
+            OPTIMAL_RANGES.tempNight.max = parseFloat(inputs.tempNightMax.value);
+            OPTIMAL_RANGES.humidity.min = parseFloat(inputs.humidityMin.value);
+            OPTIMAL_RANGES.humidity.max = parseFloat(inputs.humidityMax.value);
+            OPTIMAL_RANGES.vpd.min = parseFloat(inputs.vpdMin.value);
+            OPTIMAL_RANGES.vpd.max = parseFloat(inputs.vpdMax.value);
+            showRanges = toggleRangesCheckbox.checked;
+
+            if (parsedData) {
+                renderAllCharts();
+            }
+        }
+
+        /**
+         * Handles the file input change event.
+         */
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            initialMessage.textContent = 'Processing your file...';
+            initialMessage.classList.remove('hidden');
+            chartsArea.classList.add('hidden');
+            settingsPanel.classList.add('hidden');
+
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: (results) => {
+                    if (results.errors.length > 0) {
+                        initialMessage.textContent = 'Error: Could not parse the CSV file.';
+                        return;
+                    }
+                    processAndStoreData(results);
+                    if(parsedData) {
+                       presetsSelect.value = 'vegetative'; // Default preset
+                       handlePresetChange(); // Load default values
+                       renderAllCharts();
+                       settingsPanel.classList.remove('hidden');
+                    }
+                },
+                error: () => {
+                    initialMessage.textContent = 'An error occurred while reading the file.';
+                }
+            });
+        }
+
+        /**
+         * Processes and stores the parsed CSV data.
+         */
+        function processAndStoreData(results) {
+            const headers = results.meta.fields;
+            const timeKey = headers.find(h => h.toLowerCase().includes('time'));
+            const tempKey = headers.find(h => h.toLowerCase().includes('temperature'));
+            const humidityKey = headers.find(h => h.toLowerCase().includes('humidity'));
+            const vpdKey = headers.find(h => h.toLowerCase().includes('vpd'));
+
+            if (!timeKey || !tempKey || !humidityKey || !vpdKey) {
+                initialMessage.innerHTML = `<p class="text-red-400">Error: Required columns (Time, Temperature, Humidity, VPD) not found.</p>`;
+                parsedData = null;
+                return;
+            }
+            
+            parsedData = results.data
+                .map(row => ({
+                    time: new Date(row[timeKey]),
+                    temp: parseFloat(row[tempKey]),
+                    humidity: parseFloat(row[humidityKey]),
+                    vpd: parseFloat(row[vpdKey])
+                }))
+                .filter(row => !isNaN(row.time.getTime()) && !isNaN(row.temp))
+                .sort((a, b) => a.time - b.time);
+        }
+
+        /**
+         * Renders all three charts.
+         */
+        function renderAllCharts() {
+            if (!parsedData || parsedData.length === 0) {
+                initialMessage.textContent = 'No valid data found in the file.';
+                return;
+            }
+
+            initialMessage.classList.add('hidden');
+            chartsArea.classList.remove('hidden');
+
+            const firstDate = parsedData[0].time;
+            const formattedDate = firstDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+            mainTitle.textContent = `Grow Tent Environment (${formattedDate})`;
+
+            Object.values(chartInstances).forEach(chart => chart?.destroy());
+
+            const labels = parsedData.map(d => d.time);
+
+            // --- Create Temperature Chart ---
+            const tempCtx = document.getElementById('tempChart').getContext('2d');
+            chartInstances.temp = new Chart(tempCtx, createChartConfig({
+                title: 'Temperature',
+                labels: labels,
+                dataset: { label: 'Temperature (°F)', data: parsedData.map(d => d.temp), borderColor: 'rgb(239, 68, 68)' },
+                yAxis: { title: 'Temperature (°F)' },
+                annotations: {
+                    dayBand: createAnnotationBox(OPTIMAL_RANGES.tempDay.min, OPTIMAL_RANGES.tempDay.max, 'rgba(239, 68, 68, 0.15)', `Day (${OPTIMAL_RANGES.tempDay.min}-${OPTIMAL_RANGES.tempDay.max}°F)`),
+                    nightBand: createAnnotationBox(OPTIMAL_RANGES.tempNight.min, OPTIMAL_RANGES.tempNight.max, 'rgba(249, 115, 22, 0.1)', `Night (${OPTIMAL_RANGES.tempNight.min}-${OPTIMAL_RANGES.tempNight.max}°F)`)
+                },
+                hideXAxisLabels: true
+            }));
+            
+            // --- Create Humidity Chart ---
+            const humidityCtx = document.getElementById('humidityChart').getContext('2d');
+            chartInstances.humidity = new Chart(humidityCtx, createChartConfig({
+                title: 'Humidity',
+                labels: labels,
+                dataset: { label: 'Humidity (%)', data: parsedData.map(d => d.humidity), borderColor: 'rgb(59, 130, 246)' },
+                yAxis: { title: 'Humidity (%)' },
+                annotations: {
+                    humidityBand: createAnnotationBox(OPTIMAL_RANGES.humidity.min, OPTIMAL_RANGES.humidity.max, 'rgba(59, 130, 246, 0.15)', `Ideal (${OPTIMAL_RANGES.humidity.min}-${OPTIMAL_RANGES.humidity.max}%)`)
+                },
+                hideXAxisLabels: true
+            }));
+
+            // --- Create VPD Chart ---
+            const vpdCtx = document.getElementById('vpdChart').getContext('2d');
+            chartInstances.vpd = new Chart(vpdCtx, createChartConfig({
+                title: 'Vapor Pressure Deficit (VPD)',
+                labels: labels,
+                dataset: { label: 'VPD (kPa)', data: parsedData.map(d => d.vpd), borderColor: 'rgb(34, 197, 94)' },
+                yAxis: { title: 'VPD (kPa)' },
+                annotations: {
+                    vpdBand: createAnnotationBox(OPTIMAL_RANGES.vpd.min, OPTIMAL_RANGES.vpd.max, 'rgba(74, 222, 128, 0.15)', `Ideal (${OPTIMAL_RANGES.vpd.min}-${OPTIMAL_RANGES.vpd.max} kPa)`)
+                },
+                hideXAxisLabels: false
+            }));
+        }
+
+        /**
+         * Factory function to create a Chart.js configuration object.
+         */
+        function createChartConfig({ title, labels, dataset, yAxis, annotations, hideXAxisLabels }) {
+            return {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{ ...dataset, tension: 0.2, pointRadius: 0, borderWidth: 2, fill: false }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        x: {
+                            type: 'time', time: { unit: 'hour', tooltipFormat: 'MMM d, h:mm a' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            ticks: { color: '#9ca3af', display: !hideXAxisLabels, maxRotation: 0, autoSkip: true, autoSkipPadding: 20 }
+                        },
+                        y: {
+                            title: { display: true, text: yAxis.title, color: '#d1d5db' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            ticks: { color: '#9ca3af' }
+                        }
+                    },
+                    plugins: {
+                        title: { display: true, text: title, color: '#f9fafb', font: { size: 16 }, align: 'start', padding: { bottom: 10 } },
+                        legend: { align: 'end', labels: { color: '#d1d5db', usePointStyle: true, boxWidth: 8 } },
+                        tooltip: { backgroundColor: '#374151' },
+                        annotation: { drawTime: 'beforeDatasetsDraw', annotations: showRanges ? annotations : {} }
+                    }
+                }
+            };
+        }
+        
+        /**
+         * Helper function to create a configuration for an annotation box.
+         */
+        function createAnnotationBox(yMin, yMax, color, labelContent) {
+            return {
+                type: 'box', yMin: yMin, yMax: yMax, backgroundColor: color, borderColor: 'transparent',
+                label: {
+                    content: labelContent, display: true, position: 'start', color: 'rgba(255, 255, 255, 0.7)',
+                    font: { style: 'normal', size: 10 }, xAdjust: 10, yAdjust: -5
+                }
+            };
+        }
+
+        // Initialize settings panel on load
+        populateSettingsInputs();
+
+    </script>
+
+</body>
+</html>
+
