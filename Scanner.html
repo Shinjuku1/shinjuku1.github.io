@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- Viewport meta tag is crucial for mobile responsiveness -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR & Barcode Pro</title>
+    
+    <!-- Load Tailwind CSS from CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Load Google Font (Inter) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Load QR/Barcode Libraries -->
+    <!-- 1. html5-qrcode: For scanning codes from the camera -->
+    <script src="https://unpkg.com/html5-qrcode@2.0.9/dist/html5-qrcode.min.js"></script>
+    <!-- 2. qrcode.js: For generating QR codes -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <!-- 3. JsBarcode: For generating various barcode formats -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    
+    <style>
+        /* Custom styles to enhance the Material Design look */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* Style for the #reader element to look good on mobile */
+        #reader {
+            width: 100%;
+            border-radius: 0.5rem; /* rounded-lg */
+            overflow: hidden;
+            border: 2px solid #e2e8f0; /* border-gray-300 */
+        }
+        
+        #reader video {
+            width: 100% !important;
+            height: auto !important;
+        }
+        
+        /* Active tab style */
+        .tab-active {
+            border-bottom-color: #ffffff;
+            color: #ffffff;
+            font-weight: 600;
+        }
+        
+        .tab-inactive {
+            border-bottom-color: transparent;
+            color: #c7d2fe; /* indigo-200 */
+        }
+        
+        /* Custom Message Box (to avoid alert()) */
+        #message-box {
+            transition: all 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+    <!-- Main App Container -->
+    <div class="flex flex-col h-screen">
+        
+        <!-- Header & Tabs -->
+        <header class="bg-indigo-600 text-white shadow-lg fixed top-0 left-0 right-0 z-10">
+            <!-- App Title -->
+            <h1 class="text-2xl font-bold text-center pt-5 pb-3">QR & Barcode Pro</h1>
+            
+            <!-- Tab Navigation -->
+            <nav class="flex">
+                <button id="tab-scan" class="flex-1 text-center py-3 border-b-4 tab-active">
+                    SCAN
+                </button>
+                <button id="tab-generate" class="flex-1 text-center py-3 border-b-4 tab-inactive">
+                    GENERATE
+                </button>
+            </nav>
+        </header>
+
+        <!-- Content Area (scrollable) -->
+        <!-- pt-32 gives space for the fixed header (h-20 + h-12 approx) -->
+        <main class="flex-1 overflow-y-auto pt-32 pb-6 px-4">
+            
+            <!-- == SCANNER PAGE == -->
+            <div id="page-scan">
+                <div class="bg-white p-4 rounded-lg shadow-md mb-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-3">Scan Code</h2>
+                    <!-- This div is where the scanner video feed will appear -->
+                    <div id="reader" class="mb-4"></div>
+                    
+                    <button id="start-scan-btn" class="w-full bg-indigo-600 text-white py-3 px-6 rounded-lg font-semibold shadow-md hover:bg-indigo-700 active:bg-indigo-800 transition duration-150 ease-in-out">
+                        Start Camera Scan
+                    </button>
+                    <button id="stop-scan-btn" class="w-full bg-gray-500 text-white py-3 px-6 rounded-lg font-semibold shadow-md hover:bg-gray-600 active:bg-gray-700 transition duration-150 ease-in-out mt-3" style="display: none;">
+                        Stop Camera
+                    </button>
+                </div>
+                
+                <!-- Scan Result Card -->
+                <div id="scan-result-card" class="bg-white p-4 rounded-lg shadow-md" style="display: none;">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-3">Scan Result</h2>
+                    <div class="bg-gray-100 p-3 rounded-md mb-3 overflow-x-auto">
+                        <code id="scan-result-text" class="text-gray-700 break-words"></code>
+                    </div>
+                    <button id="copy-result-btn" class="w-full bg-blue-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-600 active:bg-blue-700 transition duration-150 ease-in-out">
+                        Copy to Clipboard
+                    </button>
+                </div>
+            </div>
+
+            <!-- == GENERATOR PAGE == -->
+            <div id="page-generate" style="display: none;">
+                <!-- Input Card -->
+                <div class="bg-white p-4 rounded-lg shadow-md mb-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-3">Generate Code</h2>
+                    
+                    <!-- Text Input -->
+                    <div class="mb-4">
+                        <label for="generate-text" class="block text-sm font-medium text-gray-700 mb-1">Text or URL</label>
+                        <textarea id="generate-text" rows="3" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                    </div>
+                    
+                    <!-- Type Selector -->
+                    <div class="mb-4">
+                        <label for="code-type" class="block text-sm font-medium text-gray-700 mb-1">Code Type</label>
+                        <select id="code-type" class="w-full p-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="QR_CODE">QR Code</option>
+                            <option value="CODE128">Barcode (CODE128)</option>
+                            <option value="CODE39">Barcode (CODE39)</option>
+                            <option value="EAN13">Barcode (EAN-13)</option>
+                            <option value="UPC">Barcode (UPC)</option>
+                        </select>
+                    </div>
+                    
+                    <button id="generate-btn" class="w-full bg-indigo-600 text-white py-3 px-6 rounded-lg font-semibold shadow-md hover:bg-indigo-700 active:bg-indigo-800 transition duration-150 ease-in-out">
+                        Generate
+                    </button>
+                </div>
+                
+                <!-- Output Card -->
+                <div id="generate-output-card" class="bg-white p-4 rounded-lg shadow-md" style="display: none;">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Your Code</h2>
+                    <!-- This div will hold the QR Code (canvas/img) or Barcode (svg) -->
+                    <div id="output-container" class="flex justify-center items-center p-4 bg-white rounded-md mb-4">
+                        <!-- Content will be injected by JS -->
+                    </div>
+                    <button id="download-btn" class="w-full bg-green-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-green-600 active:bg-green-700 transition duration-150 ease-in-out">
+                        Download Code
+                    </button>
+                </div>
+            </div>
+            
+        </main>
+    </div>
+
+    <!-- Custom Message Box (Modal) -->
+    <div id="message-box" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 opacity-0 pointer-events-none">
+        <div id="message-content" class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+            <h3 id="message-title" class="text-lg font-semibold mb-2"></h3>
+            <p id="message-text" class="text-gray-700 mb-4"></p>
+            <button id="message-close-btn" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-indigo-700">
+                OK
+            </button>
+        </div>
+    </div>
+    
+    <!-- Hidden textarea for copy-to-clipboard functionality -->
+    <textarea id="clipboard-helper" style="position: absolute; left: -9999px;"></textarea>
+    
+    <!-- MAIN APPLICATION SCRIPT -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // --- Global Variables ---
+            const tabScan = document.getElementById('tab-scan');
+            const tabGenerate = document.getElementById('tab-generate');
+            const pageScan = document.getElementById('page-scan');
+            const pageGenerate = document.getElementById('page-generate');
+            
+            const startScanBtn = document.getElementById('start-scan-btn');
+            const stopScanBtn = document.getElementById('stop-scan-btn');
+            const scanResultCard = document.getElementById('scan-result-card');
+            const scanResultText = document.getElementById('scan-result-text');
+            const copyResultBtn = document.getElementById('copy-result-btn');
+            const clipboardHelper = document.getElementById('clipboard-helper');
+            
+            const generateText = document.getElementById('generate-text');
+            const codeType = document.getElementById('code-type');
+            const generateBtn = document.getElementById('generate-btn');
+            const generateOutputCard = document.getElementById('generate-output-card');
+            const outputContainer = document.getElementById('output-container');
+            const downloadBtn = document.getElementById('download-btn');
+
+            const messageBox = document.getElementById('message-box');
+            const messageTitle = document.getElementById('message-title');
+            const messageText = document.getElementById('message-text');
+            const messageCloseBtn = document.getElementById('message-close-btn');
+
+            let html5QrCode = null; // Will hold the scanner instance
+            let lastGeneratedType = 'qr'; // 'qr' or 'barcode'
+            
+            // --- Custom Message Function (replaces alert()) ---
+            function showMessage(title, text) {
+                messageTitle.textContent = title;
+                messageText.textContent = text;
+                messageBox.classList.remove('opacity-0', 'pointer-events-none');
+            }
+            
+            messageCloseBtn.addEventListener('click', () => {
+                messageBox.classList.add('opacity-0', 'pointer-events-none');
+            });
+
+            // --- Tab Switching Logic ---
+            function showPage(pageName) {
+                if (pageName === 'scan') {
+                    pageScan.style.display = 'block';
+                    pageGenerate.style.display = 'none';
+                    tabScan.classList.add('tab-active');
+                    tabScan.classList.remove('tab-inactive');
+                    tabGenerate.classList.add('tab-inactive');
+                    tabGenerate.classList.remove('tab-active');
+                } else {
+                    pageScan.style.display = 'none';
+                    pageGenerate.style.display = 'block';
+                    tabScan.classList.add('tab-inactive');
+                    tabScan.classList.remove('tab-active');
+                    tabGenerate.classList.add('tab-active');
+                    tabGenerate.classList.remove('tab-inactive');
+                    
+                    // Stop camera if user switches tabs while scanning
+                    stopScan(); 
+                }
+            }
+            
+            tabScan.addEventListener('click', () => showPage('scan'));
+            tabGenerate.addEventListener('click', () => showPage('generate'));
+            
+            // --- Scanner Logic ---
+            function onScanSuccess(decodedText, decodedResult) {
+                // Handle the scanned code text.
+                console.log(`Code matched = ${decodedText}`, decodedResult);
+                scanResultText.textContent = decodedText;
+                scanResultCard.style.display = 'block';
+                stopScan(); // Stop scanning after a successful read
+                showMessage('Scan Successful', 'Found a code!');
+            }
+            
+            function onScanFailure(error) {
+                // handle scan failure, usually better to ignore and keep scanning.
+                // console.warn(`Code scan error = ${error}`);
+            }
+            
+            function startScan() {
+                // Initialize the scanner
+                if (!html5QrCode) {
+                    html5QrCode = new Html5Qrcode("reader");
+                }
+                
+                // Request camera permissions and start scanning
+                Html5Qrcode.getCameras().then(cameras => {
+                    if (cameras && cameras.length) {
+                        // Try to find the back camera first
+                        let cameraId = cameras[0].id;
+                        const backCamera = cameras.find(c => c.label.toLowerCase().includes('back'));
+                        if (backCamera) {
+                            cameraId = backCamera.id;
+                        }
+
+                        html5QrCode.start(
+                            cameraId,     // Or { facingMode: "environment" }
+                            {
+                                fps: 10,    // Optional, frame per seconds for qr code scanning
+                                qrbox: 250  // Optional, size of the scanning box
+                            },
+                            onScanSuccess,
+                            onScanFailure
+                        ).then(() => {
+                            startScanBtn.style.display = 'none';
+                            stopScanBtn.style.display = 'block';
+                        }).catch(err => {
+                            console.error("Failed to start scanner: ", err);
+                            showMessage('Camera Error', 'Could not start the camera. Please grant permission and try again.');
+                        });
+                    } else {
+                        showMessage('Camera Error', 'No cameras found on this device.');
+                    }
+                }).catch(err => {
+                    console.error("Error getting cameras: ", err);
+                    showMessage('Camera Error', 'Could not access cameras. Please grant permission.');
+                });
+            }
+
+            function stopScan() {
+                if (html5QrCode && html5QrCode.isScanning) {
+                    html5QrCode.stop().then(() => {
+                        console.log("QR Code scanning stopped.");
+                    }).catch(err => {
+                        console.warn("Error stopping scanner: ", err);
+                    }).finally(() => {
+                        startScanBtn.style.display = 'block';
+                        stopScanBtn.style.display = 'none';
+                    });
+                }
+            }
+            
+            startScanBtn.addEventListener('click', startScan);
+            stopScanBtn.addEventListener('click', stopScan);
+            
+            // --- Copy to Clipboard Logic ---
+            copyResultBtn.addEventListener('click', () => {
+                const textToCopy = scanResultText.textContent;
+                clipboardHelper.value = textToCopy;
+                clipboardHelper.select();
+                try {
+                    document.execCommand('copy');
+                    showMessage('Copied!', 'Result copied to clipboard.');
+                } catch (err) {
+                    console.error('Failed to copy: ', err);
+                    showMessage('Error', 'Failed to copy text.');
+                }
+            });
+
+            // --- Generator Logic ---
+            generateBtn.addEventListener('click', () => {
+                const text = generateText.value;
+                const type = codeType.value;
+                
+                if (!text) {
+                    showMessage('Input Required', 'Please enter text or a URL to generate a code.');
+                    return;
+                }
+                
+                // Clear previous output
+                outputContainer.innerHTML = '';
+                
+                try {
+                    if (type === 'QR_CODE') {
+                        lastGeneratedType = 'qr';
+                        // qrcode.js generates a canvas
+                        new QRCode(outputContainer, {
+                            text: text,
+                            width: 256,
+                            height: 256,
+                            colorDark : "#000000",
+                            colorLight : "#ffffff",
+                            correctLevel : QRCode.CorrectLevel.H
+                        });
+                    } else {
+                        lastGeneratedType = 'barcode';
+                        // JsBarcode generates an SVG
+                        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                        svg.id = 'barcode-svg';
+                        outputContainer.appendChild(svg);
+                        
+                        JsBarcode(svg, text, {
+                            format: type,
+                            displayValue: true,
+                            fontSize: 18,
+                            textMargin: 10,
+                            width: 2,
+                            height: 100,
+                        });
+                    }
+                    generateOutputCard.style.display = 'block';
+                } catch (e) {
+                    console.error('Code generation error:', e);
+                    showMessage('Generation Error', `Could not generate code. Error: ${e.message}. Check if your data is valid for the selected type (e.g., EAN-13 needs 12 digits).`);
+                    generateOutputCard.style.display = 'none';
+                }
+            });
+            
+            // --- Download Logic ---
+            downloadBtn.addEventListener('click', () => {
+                const link = document.createElement('a');
+                link.download = `generated_code.png`; // Always suggest PNG
+                
+                if (lastGeneratedType === 'qr') {
+                    // QR Code is a canvas
+                    const canvas = outputContainer.querySelector('canvas');
+                    if (canvas) {
+                        link.href = canvas.toDataURL('image/png');
+                        link.click();
+                    }
+                } else {
+                    // Barcode is an SVG
+                    const svg = outputContainer.querySelector('svg');
+                    if (svg) {
+                        // To download an SVG as a PNG, we must draw it onto a canvas
+                        const serializer = new XMLSerializer();
+                        const svgString = serializer.serializeToString(svg);
+                        
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        // Create an image from the SVG data
+                        const img = new Image();
+                        const svgBlob = new Blob([svgString], {type: "image/svg+xml;charset=utf-8"});
+                        const url = URL.createObjectURL(svgBlob);
+                        
+                        img.onload = function () {
+                            // Set canvas size to match image
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+                            
+                            // Fill background with white (for transparency)
+                            ctx.fillStyle = 'white';
+                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                            
+                            // Draw the SVG image
+                            ctx.drawImage(img, 0, 0);
+                            
+                            // Create download link from canvas
+                            link.href = canvas.toDataURL('image/png');
+                            link.click();
+                            
+                            // Clean up
+                            URL.revokeObjectURL(url);
+                        };
+                        img.src = url;
+                    }
+                }
+            });
+
+            // Set initial page
+            showPage('scan');
+        });
+    </script>
+
+</body>
+</html>
+
